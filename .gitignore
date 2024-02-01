@@ -154,7 +154,7 @@ cython_debug/
 
 # Other folders to ignore
 archive/
-.github
+.github/
 *.md
 
 # PyCharm
