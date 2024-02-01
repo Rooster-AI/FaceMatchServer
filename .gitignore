@@ -154,6 +154,8 @@ cython_debug/
 
 # Other folders to ignore
 archive/
+.github
+*.md
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
