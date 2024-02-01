@@ -2,8 +2,7 @@
 
 ## Introduction
 
-This is the Rooster server-side code for facial recogntion and verification. This code will be deployed onto a cloud based server. 
-Welcome to the Facial Recognition Server, a powerful solution for facial recognition, authentication, and identity verification. This server is designed to provide efficient real-time matching capabilities. This server is designed to receive multiple image frames from a security camera and process those frames by looking for faces that match those in the Rooster database.
+This is the Rooster server-side code for facial recogntion and verification. This code will be deployed onto a cloud based server. This server is designed to provide efficient real-time matching capabilities. This server is designed to receive multiple image frames from a security camera and process those frames by looking for faces that match those in the Rooster database.
 
 ## Prerequisites
 
