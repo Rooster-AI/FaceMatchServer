@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from concurrent.futures import ThreadPoolExecutor, wait
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
-import threading
 from datetime import datetime
 import os
 import time
@@ -12,6 +11,7 @@ import json
 import csv
 import base64
 import cv2
+import resend
 
 os.chdir(os.path.dirname(__file__))
 
@@ -23,8 +23,10 @@ MODEL_DIST = f"{MODEL}_{DIST}"
 DB = "data/database"
 BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = "./archive/activity.csv"
+TESTING_MODE = False
 
 app = Flask(__name__)
+resend.api_key = os.environ["re_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM"]
 
 with open("data/startupList.json") as f:
     contacts = json.load(f)
@@ -39,18 +41,18 @@ def upload_images():
         decoded_bytes = base64.b64decode(image)
         np_array = np.frombuffer(decoded_bytes, np.uint8)
         image_bgr = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        image_rgb = cv2.cvtColor(image_bgr , cv2.COLOR_BGR2RGB)
+        # image_rgb = cv2.cvtColor(image_bgr , cv2.COLOR_BGR2RGB)
         # im.fromarray(image_rgb).save(f"./THISFACE_{index}.jpg")
         numpy_array = np.array(image_bgr)
         images[index] = numpy_array
-        
-    print(len(images))
+
     with ThreadPoolExecutor(max_workers=20) as executor:
         all_faces = []
         s = time.time()
         to_finish_extract = [executor.submit(extract, frame, all_faces) for frame in images]
         wait(to_finish_extract)
-        print(f"Extracted {len(all_faces)} Faces in {time.time()-s}s")
+        if TESTING_MODE:
+            print(f"Extracted {len(all_faces)} Faces in {time.time()-s}s")
 
         s = time.time()
         group_matches = {i:[] for i in range(len(all_faces))}
@@ -58,8 +60,9 @@ def upload_images():
         for i, face in enumerate(all_faces):
             finish_comps.append(executor.submit(comp_face, face, i, all_faces[i+1:], group_matches))
         wait(finish_comps)
-        print(f"Grouped Faces in {time.time() - s}s")
-        print(f"Group Sizes: {[len(group_matches[a]) for a in group_matches.keys()]}")
+        if TESTING_MODE:
+            print(f"Grouped Faces in {time.time() - s}s")
+            print(f"Group Sizes: {[len(group_matches[a]) for a in group_matches.keys()]}")
 
         s = time.time()
         faceGroups = make_face_groups(group_matches, all_faces)
@@ -126,38 +129,49 @@ def extract(frame, all_faces):
     return
 
 
-def verify_faces(faceGroups):    
-    base_directory = os.path.dirname(os.path.abspath(__file__))
-    epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
-    faces_folder = os.path.join(epoch_folder, "faces")
-    os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
-    os.mkdir(faces_folder)
+def verify_faces(faceGroups):
+    if TESTING_MODE:    
+        base_directory = os.path.dirname(os.path.abspath(__file__))
+        epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
+        faces_folder = os.path.join(epoch_folder, "faces")
+        os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
+        os.mkdir(faces_folder)
     confidence_levels = {}
     face_dict = {}
     for k, key in enumerate(faceGroups.keys()):
         for i, face in enumerate(faceGroups[key]):
-            title = f"face_{k}_{i}.png"
-            save_face(face, os.path.join(faces_folder, title))
+            if TESTING_MODE: 
+                title = f"face_{k}_{i}.png"
+                save_face(face, os.path.join(faces_folder, title))
             confidence_levels[title] = face["confidence"]
             finder(face, face_dict)
 
     match = find_lowest_average(face_dict)
-    print(match)
+    if TESTING_MODE: 
+        print(match)
 
-    epoch_info = {
-        "match": {
-            "name": match,
-        },
-        "everyone": face_dict,
-        "faces_confidence": confidence_levels,
-    }
-    with open(os.path.join(epoch_folder, "epoch_results.json"), 'w') as f:
-        json.dump(epoch_info,f, indent=4)
+        epoch_info = {
+            "match": {
+                "name": match,
+            },
+            "everyone": face_dict,
+            "faces_confidence": confidence_levels,
+        }
+        with open(os.path.join(epoch_folder, "epoch_results.json"), 'w') as f:
+            json.dump(epoch_info,f, indent=4)
 
-    if match is not None:
-        with open(ACTIVITY_LOG_FILE, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([match, datetime.now().strftime('%y-%m-%d %H:%M:%S')])
+        if match is not None:
+            with open(ACTIVITY_LOG_FILE, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([match, datetime.now().strftime('%y-%m-%d %H:%M:%S')])
+    else:
+        params = {
+            "from": "Rooster <no-reply@alert.userooster.com>",
+            "to": ["delivered@resend.dev"],
+            "subject": "Alert: Shoplifter Identified in Your Store",
+            "html": "<strong>it works!</strong>",
+        }
+        resend.Emails.send(params)
     faceGroups.clear()
 
 def finder(facial_data, faceDict):
