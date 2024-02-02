@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from concurrent.futures import ThreadPoolExecutor, wait
 from deepface import DeepFace
-from rooster_deepface import match_face, verify, get_embedding
+from deepface.rooster_deepface import match_face, verify, get_embedding
 import threading
 from datetime import datetime
 import os
