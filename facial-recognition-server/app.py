@@ -26,17 +26,27 @@ ACTIVITY_LOG_FILE = "./archive/activity.csv"
 TESTING_MODE = False
 
 app = Flask(__name__)
-resend.api_key = os.environ["re_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM"]
+
+api_key = 're_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM'
+
+# Set the environment variable
+os.environ['RESEND_API_KEY'] = api_key
+
+resend.api_key = os.environ["RESEND_API_KEY"]
+
+firstFrame = None
 
 with open("data/startupList.json") as f:
     contacts = json.load(f)
 
 @app.route('/upload-images', methods=['POST'])
 def upload_images():
+    global firstFrame
     print("Uploading Images", flush=True)
     if 'images' not in request.json:
         return jsonify({'message': 'No images found in the request'}), 400
     images = request.json["images"]
+    firstFrame = images[0]
     for index, image in enumerate(images):
         decoded_bytes = base64.b64decode(image)
         np_array = np.frombuffer(decoded_bytes, np.uint8)
@@ -130,23 +140,29 @@ def extract(frame, all_faces):
 
 
 def verify_faces(faceGroups):
+    global firstFrame
     if TESTING_MODE:    
         base_directory = os.path.dirname(os.path.abspath(__file__))
         epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
         faces_folder = os.path.join(epoch_folder, "faces")
         os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
         os.mkdir(faces_folder)
-    confidence_levels = {}
+        confidence_levels = {}
     face_dict = {}
     for k, key in enumerate(faceGroups.keys()):
         for i, face in enumerate(faceGroups[key]):
             if TESTING_MODE: 
                 title = f"face_{k}_{i}.png"
                 save_face(face, os.path.join(faces_folder, title))
-            confidence_levels[title] = face["confidence"]
+                confidence_levels[title] = face["confidence"]
             finder(face, face_dict)
 
     match = find_lowest_average(face_dict)
+    match_image = None
+    for person in contacts:
+        if person['Name'] == match:
+            match_image = person['Image']
+
     if TESTING_MODE: 
         print(match)
 
@@ -165,11 +181,29 @@ def verify_faces(faceGroups):
                 writer = csv.writer(file)
                 writer.writerow([match, datetime.now().strftime('%y-%m-%d %H:%M:%S')])
     else:
+        file = open(
+            os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}"), "rb"
+        ).read()
+        html_content = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Suspected Shoplifter Alert</title>
+                </head>
+                <body>
+                    <p style="text-align: center; font-weight: bold;">
+                        Please review the two attached images to verify if this is a correct match.
+                    </p>
+                </body>
+                </html>
+            """
         params = {
             "from": "Rooster <no-reply@alert.userooster.com>",
-            "to": ["delivered@resend.dev"],
+            "to": ["spencerkunkel@userooster.com"],
             "subject": "Alert: Shoplifter Identified in Your Store",
-            "html": "<strong>it works!</strong>",
+            "html": html_content,
+            "attachments": [{"filename": "person_in_store.jpg", "content": firstFrame}, {"filename": "match.jpg", "content": list(file)}]
         }
         resend.Emails.send(params)
     faceGroups.clear()
