@@ -10,15 +10,26 @@ def getClient():
 # add user
 def add_user(full_name, email, phone_number, is_admin, store_id):
     supabase = getClient()
-    print("here")
-    response = supabase.table('users').insert({
+    data, count = supabase.table('users').insert({
         'full_name': full_name,
         'email': email,
         'phone_number': phone_number,
         'is_admin': is_admin,
         'store_id': store_id,
         }).execute()
-    print(response)
+    return data[1][0]
+
+def get_user_by_id(id):
+    supabase = getClient()
+    data, count = supabase.table('users').select('*').eq('id', id).execute()
+    return data[1][0]
+
+def delete_user_by_id(id):
+    supabase = getClient()
+    data, count = supabase.table('users').delete().eq('id', id).execute()
+    return data[1][0]
+
+
 
 # add store
 
