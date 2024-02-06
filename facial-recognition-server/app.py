@@ -1,21 +1,26 @@
-from flask import Flask, request, jsonify
-from concurrent.futures import ThreadPoolExecutor, wait
-from deepface import DeepFace
-from deepface.rooster_deepface import match_face, verify, get_embedding
-from datetime import datetime
+"""
+    This module uses Flask and DeepFace to recognize faces in uploaded images.
+    It checks images against a database to find matches and can send alerts for identified faces.
+"""
+
 import os
 import time
-import numpy as np
-from PIL import Image as im
+import base64
+from datetime import datetime
 import json
 import csv
-import base64
+from concurrent.futures import ThreadPoolExecutor, wait
+from flask import Flask, request, jsonify
+import numpy as np
 import cv2
 import resend
+from PIL import Image as im
+from deepface import DeepFace
+from deepface.rooster_deepface import match_face, verify, get_embedding
 
 os.chdir(os.path.dirname(__file__))
 
-MODEL = "ArcFace" 
+MODEL = "ArcFace"
 BACKEND = "mtcnn"
 DIST = "cosine"
 MIN_VERIFICATIONS = 3
@@ -27,10 +32,10 @@ TESTING_MODE = False
 
 app = Flask(__name__)
 
-api_key = 're_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM'
+api_key = "re_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM"
 
 # Set the environment variable
-os.environ['RESEND_API_KEY'] = api_key
+os.environ["RESEND_API_KEY"] = api_key
 
 resend.api_key = os.environ["RESEND_API_KEY"]
 
@@ -39,12 +44,13 @@ firstFrame = None
 with open("data/startupList.json") as f:
     contacts = json.load(f)
 
-@app.route('/upload-images', methods=['POST'])
+
+@app.route("/upload-images", methods=["POST"])
 def upload_images():
     global firstFrame
     print("Uploading Images", flush=True)
-    if 'images' not in request.json:
-        return jsonify({'message': 'No images found in the request'}), 400
+    if "images" not in request.json:
+        return jsonify({"message": "No images found in the request"}), 400
     images = request.json["images"]
     firstFrame = images[0]
     for index, image in enumerate(images):
@@ -59,20 +65,26 @@ def upload_images():
     with ThreadPoolExecutor(max_workers=20) as executor:
         all_faces = []
         s = time.time()
-        to_finish_extract = [executor.submit(extract, frame, all_faces) for frame in images]
+        to_finish_extract = [
+            executor.submit(extract, frame, all_faces) for frame in images
+        ]
         wait(to_finish_extract)
         if TESTING_MODE:
             print(f"Extracted {len(all_faces)} Faces in {time.time()-s}s")
 
         s = time.time()
-        group_matches = {i:[] for i in range(len(all_faces))}
+        group_matches = {i: [] for i in range(len(all_faces))}
         finish_comps = []
         for i, face in enumerate(all_faces):
-            finish_comps.append(executor.submit(comp_face, face, i, all_faces[i+1:], group_matches))
+            finish_comps.append(
+                executor.submit(comp_face, face, i, all_faces[i + 1 :], group_matches)
+            )
         wait(finish_comps)
         if TESTING_MODE:
             print(f"Grouped Faces in {time.time() - s}s")
-            print(f"Group Sizes: {[len(group_matches[a]) for a in group_matches.keys()]}")
+            print(
+                f"Group Sizes: {[len(group_matches[a]) for a in group_matches.keys()]}"
+            )
 
         s = time.time()
         faceGroups = make_face_groups(group_matches, all_faces)
@@ -80,7 +92,7 @@ def upload_images():
         verify_faces(faceGroups)
         print(f"Verified Faces in {time.time()-s}s")
 
-    return jsonify({'message': f'{len(images)} files uploaded and processed'}), 200
+    return jsonify({"message": f"{len(images)} files uploaded and processed"}), 200
 
 
 def make_face_groups(group_matches, all_faces):
@@ -98,13 +110,13 @@ def make_face_groups(group_matches, all_faces):
                 break
 
         return change
-    
+
     Done = False
     while not Done:
         Done = True
         for k in group_matches.keys():
             change = group(k)
-            if change: 
+            if change:
                 Done = False
                 break
 
@@ -112,26 +124,35 @@ def make_face_groups(group_matches, all_faces):
         faceGroups[k] = [all_faces[i] for i in list(group_matches[k]) + [k]]
 
     return faceGroups
-    
+
 
 def comp_face(face, i, faces_to_match, group_matches):
     for tmi, to_match in enumerate(faces_to_match):
         try:
-            result = verify(face['embedding'], to_match['embedding'], model_name="ArcFace", detector_backend="mtcnn", embedded_mode=True)
-            if result['verified']:
-                group_matches[i].append(i+tmi+1)
+            result = verify(
+                face["embedding"],
+                to_match["embedding"],
+                model_name="ArcFace",
+                detector_backend="mtcnn",
+                embedded_mode=True,
+            )
+            if result["verified"]:
+                group_matches[i].append(i + tmi + 1)
         except:
             continue
     return
 
+
 def extract(frame, all_faces):
     try:
-        faces = DeepFace.extract_faces(frame, detector_backend=BACKEND, enforce_detection=True)
+        faces = DeepFace.extract_faces(
+            frame, detector_backend=BACKEND, enforce_detection=True
+        )
         for f in faces:
             if f["confidence"] > BACKEND_MIN_CONFIDENCE:
                 # Add embedding so only has to be calculated once
-                emb = get_embedding(f['face'])
-                f['embedding'] = emb
+                emb = get_embedding(f["face"])
+                f["embedding"] = emb
                 all_faces.append(f)
     except Exception as e:
         print(e)
@@ -141,7 +162,7 @@ def extract(frame, all_faces):
 
 def verify_faces(faceGroups):
     global firstFrame
-    if TESTING_MODE:    
+    if TESTING_MODE:
         base_directory = os.path.dirname(os.path.abspath(__file__))
         epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
         faces_folder = os.path.join(epoch_folder, "faces")
@@ -151,7 +172,7 @@ def verify_faces(faceGroups):
     face_dict = {}
     for k, key in enumerate(faceGroups.keys()):
         for i, face in enumerate(faceGroups[key]):
-            if TESTING_MODE: 
+            if TESTING_MODE:
                 title = f"face_{k}_{i}.png"
                 save_face(face, os.path.join(faces_folder, title))
                 confidence_levels[title] = face["confidence"]
@@ -160,10 +181,10 @@ def verify_faces(faceGroups):
     match = find_lowest_average(face_dict)
     match_image = None
     for person in contacts:
-        if person['Name'] == match:
-            match_image = person['Image']
+        if person["Name"] == match:
+            match_image = person["Image"]
 
-    if TESTING_MODE: 
+    if TESTING_MODE:
         print(match)
 
         epoch_info = {
@@ -173,16 +194,17 @@ def verify_faces(faceGroups):
             "everyone": face_dict,
             "faces_confidence": confidence_levels,
         }
-        with open(os.path.join(epoch_folder, "epoch_results.json"), 'w') as f:
-            json.dump(epoch_info,f, indent=4)
+        with open(os.path.join(epoch_folder, "epoch_results.json"), "w") as f:
+            json.dump(epoch_info, f, indent=4)
 
         if match is not None:
-            with open(ACTIVITY_LOG_FILE, 'a', newline='') as file:
+            with open(ACTIVITY_LOG_FILE, "a", newline="") as file:
                 writer = csv.writer(file)
-                writer.writerow([match, datetime.now().strftime('%y-%m-%d %H:%M:%S')])
+                writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
     else:
         file = open(
-            os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}"), "rb"
+            os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}"),
+            "rb",
         ).read()
         html_content = """
                 <!DOCTYPE html>
@@ -203,10 +225,14 @@ def verify_faces(faceGroups):
             "to": ["spencerkunkel@userooster.com"],
             "subject": "Alert: Shoplifter Identified in Your Store",
             "html": html_content,
-            "attachments": [{"filename": "person_in_store.jpg", "content": firstFrame}, {"filename": "match.jpg", "content": list(file)}]
+            "attachments": [
+                {"filename": "person_in_store.jpg", "content": firstFrame},
+                {"filename": "match.jpg", "content": list(file)},
+            ],
         }
         resend.Emails.send(params)
     faceGroups.clear()
+
 
 def finder(facial_data, faceDict):
     result = None
@@ -218,13 +244,17 @@ def finder(facial_data, faceDict):
             detector_backend=BACKEND,
             distance_metric=DIST,
             enforce_detection=True,
-            silent=True
+            silent=True,
         )
         try:
-            if not len(result): print("Result returned empty")
+            if not len(result):
+                print("Result returned empty")
             for i in range(len(result)):
                 # For each person identified:
-                images_close = [get_name_from_file(image) for image in result[i]['identity'].to_list()]
+                images_close = [
+                    get_name_from_file(image)
+                    for image in result[i]["identity"].to_list()
+                ]
                 distances = result[i][MODEL_DIST].to_list()
                 if len(images_close) > 0 and len(distances) > 0:
                     for key in images_close:
@@ -232,7 +262,7 @@ def finder(facial_data, faceDict):
                             for value in distances:
                                 faceDict[key].append(value)
                                 distances.remove(value)
-                        else:   
+                        else:
                             for value in distances:
                                 faceDict[key] = [value]
                                 distances.remove(value)
@@ -242,12 +272,14 @@ def finder(facial_data, faceDict):
             print("Failed in for loop", e)
     except Exception as e:
         print("Error while finding: ", e)
-        
+
+
 def save_face(face_data, path_name):
-    new_face = face_data['face'] * 255
+    new_face = face_data["face"] * 255
     new_face = new_face.astype(np.uint8)
     image = im.fromarray(new_face)
     image.save(path_name)
+
 
 def get_name_from_file(image_path):
     try:
@@ -256,13 +288,14 @@ def get_name_from_file(image_path):
                 return contact["Name"]
     except:
         pass
-    
+
+
 def find_lowest_average(faceDict):
     if not faceDict:
         return None  # Return None if the dictionary is empty
 
     lowest_key = None
-    lowest_average = float('inf')  # Set initial lowest_average to positive infinity
+    lowest_average = float("inf")  # Set initial lowest_average to positive infinity
 
     for key, values in faceDict.items():
         if len(values) >= MIN_VERIFICATIONS:  # Check if the list of values is not empty
@@ -278,5 +311,6 @@ def find_lowest_average(faceDict):
 
     return lowest_key
 
-if __name__ == '__main__':
-    app.run(debug=True, threaded=True, host='192.168.0.16', port=5000)
+
+if __name__ == "__main__":
+    app.run(debug=True, threaded=True, host="192.168.0.16", port=5000)
