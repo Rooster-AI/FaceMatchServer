@@ -29,9 +29,43 @@ def delete_user_by_id(id):
     data, count = supabase.table('users').delete().eq('id', id).execute()
     return data[1][0]
 
-
-
 # add store
+def add_store(name, address, billing_info):
+    supabase = getClient()
+    data, count = supabase.table('stores').insert({
+        'name': name,
+        'address': address,
+        'billing_info': billing_info,
+        }).execute()
+    return data[1][0]
+
+def get_store_by_id(id):
+    supabase = getClient()
+    data, count = supabase.table('stores').select('*').eq('id', id).execute()
+    return data[1][0]
+
+def delete_store_by_id(id):
+    supabase = getClient()
+    data, count = supabase.table('stores').delete().eq('id', id).execute()
+    return data[1][0]
+
+def get_store_employees(store_id):
+    supabase = getClient()
+    data, count = supabase.table('users').select('*, stores(id)').eq('stores.id', store_id).execute()
+    return data[1]
+
+def get_store_admins(store_id):
+    supabase = getClient()
+    data, count = supabase.table('users').select('*, stores(id)').eq('stores.id', store_id).eq('is_admin', 'TRUE').execute()
+    return data[1]
+
+
+
+# add banned_person
+
+# add conviction
+
+
 
 # add banned_person
 
