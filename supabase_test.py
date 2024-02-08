@@ -76,8 +76,43 @@ class TestDAO(unittest.TestCase):
 
         response = delete_store_by_id(store_id)
 
+    def test_ban_person(self):
+        response = add_store("Rooster", "Startup Building", "121")
+        store_id = response["id"]
 
+        image = cv2.imread("testBanned.jpg")
+        _, buffer = cv2.imencode('.jpg', image)
+        base64image = base64.b64encode(buffer).decode() 
+        response = add_banned_person("Spencer", "598465", 874, store_id, 'now()', "TRUE", "An absolute literal clown", base64image)
+        spencer_id = response['id']
+        self.assertEqual(response["full_name"], "Spencer", "Spencer was not added " + str(response))
 
+        image = cv2.imread("testBanned2.jpg")
+        _, buffer = cv2.imencode('.jpg', image)
+        base64image = base64.b64encode(buffer).decode() 
+        response = add_banned_person("Anton", "000001", 3, store_id, 'now()', "False", "Speed Racer", base64image)
+        anton_id = response['id']
+        self.assertEqual(response["full_name"], "Anton", "Anton was not added " + str(response))
+
+        image = cv2.imread("testBanned3.jpg")
+        _, buffer = cv2.imencode('.jpg', image)
+        base64image = base64.b64encode(buffer).decode() 
+        response = add_banned_person("Charlie", "0154", 58, 1, 'now()', "False", "Hardened criminal", base64image)
+        charlie_id = response['id']
+        self.assertEqual(response["full_name"], "Charlie", "Charlie was not added " + str(response))
+
+        response = get_banned_person(anton_id)
+        self.assertEqual(response['id'], anton_id, "Anton was not found. response: " + str(response))
+
+        response = get_people_banned_by_store(store_id)
+        print("RESPONSE RESPONSE RESPONSE ", response)
+        self.assertEqual(len(response), 2, "Incorrect number of banned people returned for a store should have been 2 but was " + str(len(response)) + "response " + str(response))
+
+        response = get_all_banned_people()
+        self.assertGreater(len(response), 2, "Incorrect number of banned people returned for a store should have been more than 2 but was " + str(len(response)) + "response " + str(response))
+        # this could be a lot smarter
+
+        response = delete_store_by_id(store_id)
     
 
 
@@ -87,40 +122,8 @@ def db_teardown_test():
 
         
 
-    # def test_ban_person(self):
-    #     image = cv2.imread("testBanned.jpg")
-    #     _, buffer = cv2.imencode('.jpg', image)
-    #     base64image = base64.b64encode(buffer).decode() 
-    #     response = add_banned_person("Spencer", "598465", 874, TestDAO.ids['store'], 'now()', "TRUE", "An absolute literal clown", base64image)
-    #     TestDAO.ids['spencer'] = response['id']
-    #     self.assertEqual(response["full_name"], "Spencer", "Spencer was not added " + str(response))
-
-    #     image = cv2.imread("testBanned2.jpg")
-    #     _, buffer = cv2.imencode('.jpg', image)
-    #     base64image = base64.b64encode(buffer).decode() 
-    #     response = add_banned_person("Anton", "000001", 3, TestDAO.ids['store'], 'now()', "False", "Speed Racer", base64image)
-    #     TestDAO.ids['anton'] = response['id']
-    #     self.assertEqual(response["full_name"], "Anton", "Anton was not added " + str(response))
-
-    #     image = cv2.imread("testBanned3.jpg")
-    #     _, buffer = cv2.imencode('.jpg', image)
-    #     base64image = base64.b64encode(buffer).decode() 
-    #     response = add_banned_person("Charlie", "0154", 58, 1, 'now()', "False", "Hardened criminal", base64image)
-    #     TestDAO.ids['charlie'] = response['id']
-    #     self.assertEqual(response["full_name"], "Charlie", "Charlie was not added " + str(response))
-
-    # def test_get_banned_person(self):
-    #     response = get_banned_person(TestDAO.ids['anton'])
-    #     self.assertEqual(response['id'], TestDAO.ids['anton'], "Anton was not found")
-
-    # def test_get_banned_person_by_store(self):
-    #     response = get_people_banned_by_store(TestDAO.ids['store'])
-    #     self.assertEqual(len(response), 2, "Incorrect number of banned people returned for a store should have been 2 but was " + str(len(response)) + "response " + str(response))
         
 
-    # def test_get_all_banned(self):
-    #     response = get_all_banned_people()
-    #     self.assertGreater(len(response), 2, "Incorrect number of banned people returned for a store should have been more than 2 but was " + str(len(response)) + "response " + str(response))
 
 
 

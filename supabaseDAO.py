@@ -96,19 +96,23 @@ def remove_banned_person_by_id(id):
 def get_banned_person(id):
     supabase = getClient()
     data, count = supabase.table('banned_person').select('*').eq('id', id).execute()
-    return data
+    if len(data[1]) > 0:
+        return data[1][0]
+    else:
+        return data[1]
    
 
 # get all banned people
 def get_all_banned_people():
     supabase = getClient()
     data, count = supabase.table('banned_person').select('*').execute()
+    return data[1]
 
 # get all people banned by a store
 def get_people_banned_by_store(store_id):
     supabase = getClient()
     data, count = supabase.table('banned_person').select('*').eq('reporting_store_id', store_id).execute()
-    return data
+    return data[1]
 
 # get all images of banned people
 
