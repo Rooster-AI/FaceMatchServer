@@ -22,7 +22,11 @@ def add_user(full_name, email, phone_number, is_admin, store_id):
 def get_user_by_id(id):
     supabase = getClient()
     data, count = supabase.table('users').select('*').eq('id', id).execute()
-    return data[1][0]
+    print(data[1])
+    if len(data[1]) > 0:
+        return data[1][0]
+    else:
+        return data[1]
 
 def delete_user_by_id(id):
     supabase = getClient()
@@ -42,7 +46,10 @@ def add_store(name, address, billing_info):
 def get_store_by_id(id):
     supabase = getClient()
     data, count = supabase.table('stores').select('*').eq('id', id).execute()
-    return data[1][0]
+    if len(data[1]) > 0:
+        return data[1][0]
+    else:
+        return data[1]
 
 def delete_store_by_id(id):
     supabase = getClient()
@@ -51,41 +58,72 @@ def delete_store_by_id(id):
 
 def get_store_employees(store_id):
     supabase = getClient()
-    data, count = supabase.table('users').select('*, stores(id)').eq('stores.id', store_id).execute()
+    data, count = supabase.table('users').select('*').eq('store_id', store_id).execute()
     return data[1]
 
 def get_store_admins(store_id):
     supabase = getClient()
-    data, count = supabase.table('users').select('*, stores(id)').eq('stores.id', store_id).eq('is_admin', 'TRUE').execute()
+    data, count = supabase.table('users').select('*').eq('store_id', store_id).eq('is_admin', 'TRUE').execute()
     return data[1]
 
+def add_banned_person(full_name, license, est_value_stolen, reporting_store_id, report_date, is_private, description, image):
+    supabase = getClient()
+    data, count = supabase.table('banned_person').insert({
+        'full_name': full_name,
+        'license': license,
+        'est_value_stolen': est_value_stolen,
+        'reporting_store_id': reporting_store_id,
+        'report_date': report_date,
+        'is_private': is_private,
+        'description': description,
+        }).execute()
+    id = data[1][0]['id']
 
+    response = supabase.table('banned_person_images').insert({
+        'banned_person_id': id,
+        'image': image
+    }).execute()
+    print(response)
 
-# add banned_person
-
-# add conviction
-
-
-
-# add banned_person
-
-# add conviction
-
-# remove user
-
-# remove store
+    return data[1][0]
 
 # remove banned person
+def remove_banned_person_by_id(id):  
+    supabase = getClient()
+    data, count = supabase.table('banned_person').delete().eq('id', id).execute()
+    return data[1][0]
 
-# find people banned by a store
+# get a banned person by id
+def get_banned_person(id):
+    supabase = getClient()
+    data, count = supabase.table('banned_person').select('*').eq('id', id).execute()
+    return data
+   
 
-# find admins in a store
+# get all banned people
+def get_all_banned_people():
+    supabase = getClient()
+    data, count = supabase.table('banned_person').select('*').execute()
 
-# find employees in a store
+# get all people banned by a store
+def get_people_banned_by_store(store_id):
+    supabase = getClient()
+    data, count = supabase.table('banned_person').select('*').eq('reporting_store_id', store_id).execute()
+    return data
+
+# get all images of banned people
+
+# get all images of a banned person
+
+# remove image
+
+# add image
+
+# update a person banned by a store
+
+# add conviction
 
 # change banned_person_image
 
 # add event to person
-
-# get info about a banned person given id
 
