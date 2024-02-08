@@ -38,8 +38,6 @@ os.environ["RESEND_API_KEY"] = RESEND_API_KEY
 
 resend.api_key = os.environ["RESEND_API_KEY"]
 
-firstFrame = None
-
 with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
 
@@ -52,26 +50,18 @@ def upload_images():
         and verifies them against a database.
         It returns a response indicating the outcome of the processing.
     """
-    global firstFrame
     print("Uploading Images", flush=True)
     if "images" not in request.json:
         return jsonify({"message": "No images found in the request"}), 400
     images = request.json["images"]
-    firstFrame = images[0]
-    for index, image in enumerate(images):
-        decoded_bytes = base64.b64decode(image)
-        np_array = np.frombuffer(decoded_bytes, np.uint8)
-        image_bgr = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        # image_rgb = cv2.cvtColor(image_bgr , cv2.COLOR_BGR2RGB)
-        # im.fromarray(image_rgb).save(f"./THISFACE_{index}.jpg")
-        numpy_array = np.array(image_bgr)
-        images[index] = numpy_array
+    first_frame = images[0]
+    decoded_images = decode_images(images)
 
     with ThreadPoolExecutor(max_workers=20) as executor:
         all_faces = []
         s = time.time()
         to_finish_extract = [
-            executor.submit(extract, frame, all_faces) for frame in images
+            executor.submit(extract, frame, all_faces) for frame in decoded_images
         ]
         wait(to_finish_extract)
         if TESTING_MODE:
@@ -94,11 +84,22 @@ def upload_images():
         s = time.time()
         face_groups = make_face_groups(group_matches, all_faces)
 
-        verify_faces(face_groups)
+        verify_faces(face_groups, first_frame)
         print(f"Verified Faces in {time.time()-s}s")
 
-    return jsonify({"message": f"{len(images)} files uploaded and processed"}), 200
+    return jsonify({"message": f"{len(decoded_images)} files uploaded and processed"}), 200
 
+def decode_images(images):
+    """Decodes base64-encoded images and converts them to numpy arrays."""
+    decoded_images = []
+    for image in images:
+        decoded_bytes = base64.b64decode(image)
+        np_array = np.frombuffer(decoded_bytes, np.uint8)
+        image_bgr = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        # image_rgb = cv2.cvtColor(image_bgr , cv2.COLOR_BGR2RGB)
+        # im.fromarray(image_rgb).save(f"./THISFACE_{index}.jpg")
+        decoded_images.append(np.array(image_bgr))
+    return decoded_images
 
 def make_face_groups(group_matches, all_faces):
     """
@@ -152,7 +153,6 @@ def comp_face(face, i, faces_to_match, group_matches):
                 group_matches[i].append(i + tmi + 1)
         except ValueError:
             continue
-    return
 
 
 def extract(frame, all_faces):
@@ -176,18 +176,13 @@ def extract(frame, all_faces):
     return
 
 
-def verify_faces(face_groups):
+def verify_faces(face_groups, first_frame):
     """
         Verifies identified faces against groups, logs matches, and optionally sends an alert if
         a match is found. Saves face images and match data in testing mode.
     """
-    global firstFrame
     if TESTING_MODE:
-        base_directory = os.path.dirname(os.path.abspath(__file__))
-        epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
-        faces_folder = os.path.join(epoch_folder, "faces")
-        os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
-        os.mkdir(faces_folder)
+        faces_folder, epoch_folder = make_test_directory()
         confidence_levels = {}
     face_dict = {}
     for k, key in enumerate(face_groups.keys()):
@@ -205,53 +200,68 @@ def verify_faces(face_groups):
             match_image = person["Image"]
 
     if TESTING_MODE:
-        print(match)
-
-        epoch_info = {
-            "match": {
-                "name": match,
-            },
-            "everyone": face_dict,
-            "faces_confidence": confidence_levels,
-        }
-        with open(os.path.join(epoch_folder, "epoch_results.json"), "w", encoding="utf-8") as file:
-            json.dump(epoch_info, file, indent=4)
-
-        if match is not None:
-            with open(ACTIVITY_LOG_FILE, "a", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
+        write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
     else:
-        file = open(
-            os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}"),
-            "rb",
-        ).read()
-        html_content = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Suspected Shoplifter Alert</title>
-                </head>
-                <body>
-                    <p style="text-align: center; font-weight: bold;">
-                        Please review the two attached images to verify if this is a correct match.
-                    </p>
-                </body>
-                </html>
-            """
-        params = {
-            "from": "Rooster <no-reply@alert.userooster.com>",
-            "to": ["spencerkunkel@userooster.com"],
-            "subject": "Alert: Shoplifter Identified in Your Store",
-            "html": html_content,
-            "attachments": [
-                {"filename": "person_in_store.jpg", "content": firstFrame},
-                {"filename": "match.jpg", "content": list(file)},
-            ],
-        }
-        resend.Emails.send(params)
+        send_email(match_image, first_frame)
     face_groups.clear()
+
+def make_test_directory():
+    """Makes directory for storing server test results"""
+    base_directory = os.path.dirname(os.path.abspath(__file__))
+    epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
+    faces_folder = os.path.join(epoch_folder, "faces")
+    os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
+    os.mkdir(faces_folder)
+    return faces_folder, epoch_folder
+
+def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
+    """Writes server results to test directory"""
+    print(match)
+    epoch_info = {
+        "match": {
+            "name": match,
+        },
+        "everyone": face_dict,
+        "faces_confidence": confidence_levels,
+    }
+    with open(os.path.join(epoch_folder, "epoch_results.json"), "w", encoding="utf-8") as file:
+        json.dump(epoch_info, file, indent=4)
+
+    if match is not None:
+        with open(ACTIVITY_LOG_FILE, "a", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
+
+def send_email(match_image, first_frame):
+    """Sends an email alert with attached images for shoplifter identification."""
+    file_path = os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}")
+    with open(file_path, "rb") as file:
+        data = file.read()
+    html_content = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Suspected Shoplifter Alert</title>
+            </head>
+            <body>
+                <p style="text-align: center; font-weight: bold;">
+                    Please review the two attached images to verify if this is a correct match.
+                </p>
+            </body>
+            </html>
+        """
+    params = {
+        "from": "Rooster <no-reply@alert.userooster.com>",
+        "to": ["spencerkunkel@userooster.com"],
+        "subject": "Alert: Shoplifter Identified in Your Store",
+        "html": html_content,
+        "attachments": [
+            {"filename": "person_in_store.jpg", "content": first_frame},
+            {"filename": "match.jpg", "content": list(data)},
+        ],
+    }
+    resend.Emails.send(params)
 
 
 def finder(facial_data, face_dict):
@@ -271,31 +281,35 @@ def finder(facial_data, face_dict):
             silent=True,
         )
         try:
-            if not result:
-                print("Result returned empty")
-            for res in result:
-                # For each person identified:
-                images_close = [
-                    get_name_from_file(image)
-                    for image in res["identity"].to_list()
-                ]
-                distances = res[MODEL_DIST].to_list()
-                if len(images_close) > 0 and len(distances) > 0:
-                    for key in images_close:
-                        if key in face_dict.keys():
-                            for value in distances:
-                                face_dict[key].append(value)
-                                distances.remove(value)
-                        else:
-                            for value in distances:
-                                face_dict[key] = [value]
-                                distances.remove(value)
-                else:
-                    print("no images close")
+            find_face(result, face_dict)
         except KeyError as e:
             print("Failed in for loop", e)
     except ValueError as e:
         print("Error while finding: ", e)
+
+def find_face(result, face_dict):
+    """Updates a dictionary with faces identified from results, including distances."""
+    if not result:
+        print("Result returned empty")
+    for res in result:
+        # For each person identified:
+        images_close = [
+            get_name_from_file(image)
+            for image in res["identity"].to_list()
+        ]
+        distances = res[MODEL_DIST].to_list()
+        if len(images_close) > 0 and len(distances) > 0:
+            for key in images_close:
+                if key in face_dict.keys():
+                    for value in distances:
+                        face_dict[key].append(value)
+                        distances.remove(value)
+                else:
+                    for value in distances:
+                        face_dict[key] = [value]
+                        distances.remove(value)
+        else:
+            print("no images close")
 
 
 def save_face(face_data, path_name):
@@ -314,6 +328,7 @@ def get_name_from_file(image_path):
                 return contact["Name"]
     except (TypeError, KeyError) as e:
         print(f"An error occurred: {e}")
+    return None
 
 
 def find_lowest_average(face_dict):
