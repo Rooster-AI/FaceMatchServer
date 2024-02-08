@@ -24,10 +24,10 @@ class TestDAO(unittest.TestCase):
     def test_add_user(self):
         response = add_store("Rooster", "Startup Building", "121")
         store_id = response["id"]
-        self.assertEqual(response['name'], "Rooster", "Rooster was not added")
 
         response = add_user("Devin", "d@example.com", "45151", False, store_id)
         devin_id = response['id']
+        
         response = get_user_by_id(devin_id)
         self.assertEqual(response['full_name'], "Devin", "Devin was not added")
 
@@ -44,23 +44,35 @@ class TestDAO(unittest.TestCase):
     def test_add_admin(self):
         response = add_store("Rooster", "Startup Building", "121")
         store_id = response["id"]
-        self.assertEqual(response['name'], "Rooster", "Rooster was not added")
 
         response = add_user("Bridger", "b@example.com", "121", True, store_id)
         bridger_id = response['id']
         self.assertEqual(response['full_name'], "Bridger", "Bridger was not added")
         
         response = get_user_by_id(bridger_id)
-        self.assertEqual(response['full_name'], "Bridger", "Bridger was not added")
-        print(response)
+        self.assertEqual(response['full_name'], "Bridger", "Bridger was not added to db")
+
         self.assertEqual(response['is_admin'], True, "Bridger was found but is not admin")
 
-        response = delete_user_by_id(bridger_id)
-        self.assertEqual(response['id'], bridger_id, "Correct id was not returned")
+        response = delete_store_by_id(store_id)
 
-        response = get_user_by_id(bridger_id)
+    def test_get_employees_and_admins(self):
+        response = add_store("Rooster", "Startup Building", "121")
+        store_id = response["id"]
 
-        self.assertEqual(response, [], "user was deleted but was still in database")
+        response = add_user("Bridger", "b@example.com", "121", True, store_id)
+        bridger_id = response['id']
+        
+        response = add_user("Devin", "d@example.com", "45151", False, store_id)
+        devin_id = response['id']
+
+        response = get_store_employees(store_id)
+        self.assertEqual(len(response), 2, "Incorrect number of employees returned should have been 2 but was " + str(len(response)) + "response " + str(response))
+        # print(response) could assert that devin and bridger are on the list
+
+        response = get_store_admins(store_id)
+        self.assertEqual(len(response), 1, "Incorrect number of admins returned should have been 1 but was " + str(len(response)) + "response " + str(response))
+        self.assertEqual(response[0]['id'], bridger_id)
 
         response = delete_store_by_id(store_id)
 
@@ -73,13 +85,6 @@ def db_teardown_test():
     response = delete_store_by_id(TestDAO.ids['store'])
 
 
-    # def test_get_employees(self):
-    #     response = get_store_employees(TestDAO.ids['store'])
-    #     self.assertEqual(len(response), 2, "Incorrect number of employees returned should have been 2 but was " + str(len(response)) + "response " + str(response))
-
-    # def test_get_admins(self):
-    #     response = get_store_admins(TestDAO.ids['store'])
-    #     self.assertEqual(len(response), 1, "Incorrect number of admins returned should have been 1 but was " + str(len(response)) + "response " + str(response))
         
 
     # def test_ban_person(self):

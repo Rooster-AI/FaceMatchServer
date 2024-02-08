@@ -83,7 +83,6 @@ def add_banned_person(full_name, license, est_value_stolen, reporting_store_id, 
         'banned_person_id': id,
         'image': image
     }).execute()
-    print(response)
 
     return data[1][0]
 
