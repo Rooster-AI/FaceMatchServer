@@ -17,6 +17,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install git+https://github.com/Rooster-AI/rooster-deepface.git@34702da59c85435e9ce1786bbd27fdf5fde3b822#egg=deepface
         pip install pylint
         pip install opencv-python
         pip install deepface
