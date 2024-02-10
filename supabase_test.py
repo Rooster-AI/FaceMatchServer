@@ -5,7 +5,7 @@ import base64
 import os
 import unittest
 import cv2
-from supabaseDAO import * 
+from supabaseDAO import *
 
 class TestDAO(unittest.TestCase):
     """
@@ -174,13 +174,14 @@ class TestDAO(unittest.TestCase):
         self.assertEqual(len(response), 2,
                          "Incorrect number of images returned for a banned person should have been"
                          + " 2 but was " + str(len(response)))
-        
+
         image_id = response[0]['id']
+        
         # remove an image of a banned person
         response = remove_banned_person_image_by_id(image_id)
         self.assertEqual(response['id'], image_id,
                          "Incorrect id returned for deleted image")
-        
+
         response = get_banned_person_images(spencer_id)
         self.assertEqual(len(response), 1,
                          "Incorrect number of images returned for a banned person should have been"
