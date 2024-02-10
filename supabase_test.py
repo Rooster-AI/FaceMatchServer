@@ -176,7 +176,7 @@ class TestDAO(unittest.TestCase):
                          + " 2 but was " + str(len(response)))
 
         image_id = response[0]['id']
-        
+
         # remove an image of a banned person
         response = remove_banned_person_image_by_id(image_id)
         self.assertEqual(response['id'], image_id,
@@ -186,6 +186,33 @@ class TestDAO(unittest.TestCase):
         self.assertEqual(len(response), 1,
                          "Incorrect number of images returned for a banned person should have been"
                          + " 1 but was " + str(len(response)))
+
+        response = delete_store_by_id(store_id)
+
+    def test_update_banned_person(self):
+        """
+        Test updating a banned person
+        """
+        response = add_store("Rooster", "Startup Building", "121")
+        store_id = response["id"]
+
+        image = cv2.imread("testBanned.jpg")
+        _, buffer = cv2.imencode('.jpg', image)
+        base64image = base64.b64encode(buffer).decode()
+        response = add_banned_person("Spencer", "598465", 874, store_id,
+                                        'now()', "TRUE", "An absolute literal clown",
+                                        base64image)
+        spencer_id = response['id']
+
+        response = update_banned_person(spencer_id, "Spencer", "598465", 85874, store_id,
+                                        'now()', "TRUE",
+                                        "An absolute literal clown who has taken a lot of money")
+
+        self.assertEqual(response['est_value_stolen'], 85874,
+                            "Incorrect value of stolen goods returned for updated banned person")
+        self.assertEqual(response['description'],
+                            "An absolute literal clown who has taken a lot of money",
+                            "Incorrect description returned for updated banned person")
 
         response = delete_store_by_id(store_id)
 

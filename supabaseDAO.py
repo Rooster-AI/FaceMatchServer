@@ -138,7 +138,19 @@ def remove_banned_person_image_by_id(id):
     data, count = supabase.table('banned_person_images').delete().eq('id', id).execute()
     return data[1][0]
 
-# update a person banned by a store
+# update a banned person
+def update_banned_person(id, full_name, license, est_value_stolen, reporting_store_id, report_date, is_private, description):
+    supabase = getClient()
+    data, count = supabase.table('banned_person').update({
+        'full_name': full_name,
+        'license': license,
+        'est_value_stolen': est_value_stolen,
+        'reporting_store_id': reporting_store_id,
+        'report_date': report_date,
+        'is_private': is_private,
+        'description': description,
+        }).eq('id', id).execute()
+    return data[1][0]
 
 # add conviction
 
