@@ -135,7 +135,7 @@ class TestDAO(unittest.TestCase):
         _, buffer = cv2.imencode('.jpg', image)
         base64image = base64.b64encode(buffer).decode()
         
-        charlie = BannedPerson("Charlie", "0154", 58, store_id, 'now()', "False",
+        charlie = BannedPerson("Charlie", "0154", 58, 1, 'now()', "False",
                                "Hardened criminal")
         response = add_banned_person(charlie, base64image)
         # charlie_id = response['id']
@@ -149,7 +149,7 @@ class TestDAO(unittest.TestCase):
         response = get_people_banned_by_store(store_id)
 
         self.assertEqual(len(response), 2,
-                         "Incorrect number of banned people returned for a store should have been" 
+                         "Incorrect number of banned people returned from a store should have been " 
                           + "2 but was "+ str(len(response)) + " response " + str(response))
 
         response = get_all_banned_people()

@@ -172,7 +172,6 @@ def add_banned_person_image(banned_person_image: BannedPersonImage):
 
     return banned_person_image
 
-# remove banned person
 def remove_banned_person_by_id(banned_person_id):
     """
     Remove a banned person from the database.
@@ -185,7 +184,6 @@ def remove_banned_person_by_id(banned_person_id):
 
     return banned_person_image
 
-# get a banned person by id
 def get_banned_person(banned_person_id):
     """
     Get a banned person by their id
@@ -199,7 +197,6 @@ def get_banned_person(banned_person_id):
                                 data[1][0]['description'], data[1][0]['id'])
     return banned_person
 
-# get all banned people
 def get_all_banned_people():
     """
     Get all banned people
@@ -221,7 +218,6 @@ def get_all_banned_people():
 
     return banned_people
 
-# get all people banned by a store
 def get_people_banned_by_store(store_id):
     """
     Get all people banned by a store
@@ -229,7 +225,7 @@ def get_people_banned_by_store(store_id):
     supabase = get_client()
     data, _ = supabase.table('banned_person').select('*') \
         .eq('reporting_store_id', store_id).execute()
-    print(store_id)
+
     banned_people = []
     for banned_person in data[1]:
         banned_person = BannedPerson(banned_person['full_name'],
@@ -244,7 +240,6 @@ def get_people_banned_by_store(store_id):
 
     return banned_people
 
-# get all images of a banned person
 def get_banned_person_images(banned_person_id):
     """
     Get all images of a banned person
@@ -262,7 +257,6 @@ def get_banned_person_images(banned_person_id):
 
     return banned_person_images
 
-# get all images of banned people
 def get_all_banned_person_images():
     """
     Get all images of banned people. Used for the model training
@@ -280,7 +274,6 @@ def get_all_banned_person_images():
 
     return banned_person_images
 
-# remove image
 def remove_banned_person_image_by_id(banned_person_id):
     """
     Remove an image of a banned person by the image id
@@ -293,7 +286,6 @@ def remove_banned_person_image_by_id(banned_person_id):
 
     return banned_person_image
 
-# update a banned person
 def update_banned_person(banned_person: BannedPerson):
     """
     Update a banned person
