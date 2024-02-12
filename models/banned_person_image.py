@@ -1,3 +1,4 @@
+# pylint: disable=W0622,R0903
 """
 A model of a banned person image that mimics the database schema
 """

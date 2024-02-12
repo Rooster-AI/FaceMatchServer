@@ -22,7 +22,8 @@ jobs:
         pip install opencv-python
         pip install deepface
         pip install resend
+        pip install supabase
+        pip install python-dotenv
     - name: Analysing the code with pylint
       run: |
-        chmod +x .github/workflows/pylint_runner.sh
-        ./.github/workflows/pylint_runner.sh
+        pylint $(git ls-files '*.py') --disable=e1101

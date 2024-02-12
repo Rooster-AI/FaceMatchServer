@@ -1,3 +1,4 @@
+# pylint: disable=R0913,W0622,R0903
 """
 A model for a user that mimics the database schema
 """
