@@ -1,11 +1,14 @@
-# pylint: disable=W0614,W0401
+# pylint: disable=W0614,W0401,C0413,E1101
 """
 Tests for using the DAO
 """
 import base64
 import os
+import sys
 import unittest
 import cv2
+
+sys.path.append("../")
 from supabase_dao import *
 
 class TestDAO(unittest.TestCase):
