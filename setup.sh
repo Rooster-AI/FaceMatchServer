@@ -22,3 +22,4 @@ else
 fi
 
 echo "Virtual environment created and activated. Dependencies installed."
+

@@ -1,14 +1,18 @@
 """
 A seris of functions that interact with the Supabase database.
 """
+import os
 from supabase import create_client
+from dotenv import load_dotenv
 from models.banned_person import BannedPerson
 from models.banned_person_image import BannedPersonImage
 from models.user import User
 from models.store import Store
 
-url: str = "https://njmckcmrwmpmwdnfxxsj.supabase.co"
-key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qbWNrY21yd21wbXdkbmZ4eHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDcxNjQyOTEsImV4cCI6MjAyMjc0MDI5MX0.eVKm1TuiJ8E5qTt3FLlEnNjsLtbcBv0mx3g1bTA94Fw"
+load_dotenv()
+
+url: str = os.getenv('SUPABASE_URL')
+key: str = os.getenv('SUPABASE_KEY')
 
 def get_client():
     """
@@ -17,6 +21,7 @@ def get_client():
     Returns:
         Supabase client: The Supabase client object.
     """
+    print(url, key)
     return create_client(url, key)
 
 def add_user(user: User):
