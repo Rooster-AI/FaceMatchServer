@@ -73,7 +73,8 @@ def add_store(store: Store):
         'billing_info': store.billing_info,
         }).execute()
 
-    store = Store(data[1][0]['name'], data[1][0]['address'], data[1][0]['billing_info'], data[1][0]['id'])
+    store = Store(data[1][0]['name'], data[1][0]['address'],
+                  data[1][0]['billing_info'], data[1][0]['id'])
     return store
 
 def get_store_by_id(store_id):
@@ -84,7 +85,8 @@ def get_store_by_id(store_id):
     data, _ = supabase.table('stores').select('*').eq('id', store_id).execute()
     store = None
     if len(data[1]) > 0:
-        store = Store(data[1][0]['name'], data[1][0]['address'], data[1][0]['billing_info'], data[1][0]['id'])
+        store = Store(data[1][0]['name'], data[1][0]['address'],
+                      data[1][0]['billing_info'], data[1][0]['id'])
 
     return store
 
@@ -97,7 +99,8 @@ def delete_store_by_id(store_id):
     supabase = get_client()
     data, _ = supabase.table('stores').delete().eq('id', store_id).execute()
 
-    store = Store(data[1][0]['name'], data[1][0]['address'], data[1][0]['billing_info'], data[1][0]['id'])
+    store = Store(data[1][0]['name'], data[1][0]['address'],
+                  data[1][0]['billing_info'], data[1][0]['id'])
     return store
 
 def get_store_employees(store_id):
@@ -168,7 +171,8 @@ def add_banned_person_image(banned_person_image: BannedPersonImage):
         'image': banned_person_image.image
     }).execute()
 
-    banned_person_image = BannedPersonImage(data[1][0]['banned_person_id'], data[1][0]['image'], data[1][0]['id'])
+    banned_person_image = BannedPersonImage(
+        data[1][0]['banned_person_id'], data[1][0]['image'], data[1][0]['id'])
 
     return banned_person_image
 
@@ -180,7 +184,8 @@ def remove_banned_person_by_id(banned_person_id):
     supabase = get_client()
     data, _ = supabase.table('banned_person').delete().eq('id', banned_person_id).execute()
 
-    banned_person_image = BannedPersonImage(data[1][0]['banned_person_id'], data[1][0]['image'], data[1][0]['id'])
+    banned_person_image = BannedPersonImage(
+        data[1][0]['banned_person_id'], data[1][0]['image'], data[1][0]['id'])
 
     return banned_person_image
 
@@ -282,7 +287,8 @@ def remove_banned_person_image_by_id(banned_person_id):
     data, _ = supabase.table('banned_person_images') \
         .delete().eq('id', banned_person_id).execute()
 
-    banned_person_image = BannedPersonImage(data[1][0]['banned_person_id'], data[1][0]['image'], data[1][0]['id'])
+    banned_person_image = BannedPersonImage(
+        data[1][0]['banned_person_id'], data[1][0]['image'], data[1][0]['id'])
 
     return banned_person_image
 
@@ -300,7 +306,7 @@ def update_banned_person(banned_person: BannedPerson):
         'is_private': banned_person.is_private,
         'description': banned_person.description,
         }).eq('id', banned_person.banned_person_id).execute()
-    
+
     banned_person = BannedPerson(data[1][0]['full_name'], data[1][0]['license'],
                                 data[1][0]['est_value_stolen'], data[1][0]['reporting_store_id'],
                                 data[1][0]['report_date'], data[1][0]['is_private'],
