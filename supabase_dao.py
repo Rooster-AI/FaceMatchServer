@@ -184,8 +184,10 @@ def remove_banned_person_by_id(banned_person_id):
     supabase = get_client()
     data, _ = supabase.table('banned_person').delete().eq('id', banned_person_id).execute()
 
-    banned_person_image = BannedPersonImage(
-        data[1][0]['banned_person_id'], data[1][0]['image'], data[1][0]['id'])
+    banned_person_image = BannedPerson(data[1][0]['full_name'], data[1][0]['license'],
+                                data[1][0]['est_value_stolen'], data[1][0]['reporting_store_id'],
+                                data[1][0]['report_date'], data[1][0]['is_private'],
+                                data[1][0]['description'], data[1][0]['id'])
 
     return banned_person_image
 
@@ -208,7 +210,6 @@ def get_all_banned_people():
     """
     supabase = get_client()
     data, _ = supabase.table('banned_person').select('*').execute()
-
     banned_people = []
     for banned_person in data[1]:
         banned_person = BannedPerson(banned_person['full_name'],
@@ -220,7 +221,6 @@ def get_all_banned_people():
                                     banned_person['description'],
                                     banned_person['id'])
         banned_people.append(banned_person)
-
     return banned_people
 
 def get_people_banned_by_store(store_id):
@@ -297,6 +297,7 @@ def update_banned_person(banned_person: BannedPerson):
     Update a banned person
     """
     supabase = get_client()
+
     data, _ = supabase.table('banned_person').update({
         'full_name': banned_person.full_name,
         'license': banned_person.drivers_license,
@@ -305,7 +306,8 @@ def update_banned_person(banned_person: BannedPerson):
         'report_date': banned_person.report_date,
         'is_private': banned_person.is_private,
         'description': banned_person.description,
-        }).eq('id', banned_person.banned_person_id).execute()
+        }) \
+    .eq('id', banned_person.id).execute()
 
     banned_person = BannedPerson(data[1][0]['full_name'], data[1][0]['license'],
                                 data[1][0]['est_value_stolen'], data[1][0]['reporting_store_id'],
