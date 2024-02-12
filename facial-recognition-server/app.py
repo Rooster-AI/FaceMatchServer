@@ -1,21 +1,26 @@
-from flask import Flask, request, jsonify
-from concurrent.futures import ThreadPoolExecutor, wait
-from deepface import DeepFace
-from deepface.rooster_deepface import match_face, verify, get_embedding
-from datetime import datetime
+"""
+    This module uses Flask and DeepFace to recognize faces in uploaded images.
+    It checks images against a database to find matches and can send alerts for identified faces.
+"""
+
 import os
 import time
-import numpy as np
-from PIL import Image as im
+import base64
+from datetime import datetime
 import json
 import csv
-import base64
+from concurrent.futures import ThreadPoolExecutor, wait
+from flask import Flask, request, jsonify
+import numpy as np
 import cv2
 import resend
+from PIL import Image as im
+from deepface import DeepFace
+from deepface.rooster_deepface import match_face, verify, get_embedding
 
 os.chdir(os.path.dirname(__file__))
 
-MODEL = "ArcFace" 
+MODEL = "ArcFace"
 BACKEND = "mtcnn"
 DIST = "cosine"
 MIN_VERIFICATIONS = 3
@@ -23,68 +28,85 @@ MODEL_DIST = f"{MODEL}_{DIST}"
 DB = "data/database"
 BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = "./archive/activity.csv"
+RESEND_API_KEY = "re_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM"
 TESTING_MODE = False
 
 app = Flask(__name__)
 
-api_key = 're_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM'
-
 # Set the environment variable
-os.environ['RESEND_API_KEY'] = api_key
+os.environ["RESEND_API_KEY"] = RESEND_API_KEY
 
 resend.api_key = os.environ["RESEND_API_KEY"]
 
-firstFrame = None
-
-with open("data/startupList.json") as f:
+with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
 
-@app.route('/upload-images', methods=['POST'])
+
+@app.route("/upload-images", methods=["POST"])
 def upload_images():
-    global firstFrame
+    """
+        Handles the POST request to upload and process images for facial recognition.
+        This function decodes base64-encoded images, extracts faces, groups similar faces together,
+        and verifies them against a database.
+        It returns a response indicating the outcome of the processing.
+    """
     print("Uploading Images", flush=True)
-    if 'images' not in request.json:
-        return jsonify({'message': 'No images found in the request'}), 400
+    if "images" not in request.json:
+        return jsonify({"message": "No images found in the request"}), 400
     images = request.json["images"]
-    firstFrame = images[0]
-    for index, image in enumerate(images):
-        decoded_bytes = base64.b64decode(image)
-        np_array = np.frombuffer(decoded_bytes, np.uint8)
-        image_bgr = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        # image_rgb = cv2.cvtColor(image_bgr , cv2.COLOR_BGR2RGB)
-        # im.fromarray(image_rgb).save(f"./THISFACE_{index}.jpg")
-        numpy_array = np.array(image_bgr)
-        images[index] = numpy_array
+    first_frame = images[0]
+    decoded_images = decode_images(images)
 
     with ThreadPoolExecutor(max_workers=20) as executor:
         all_faces = []
         s = time.time()
-        to_finish_extract = [executor.submit(extract, frame, all_faces) for frame in images]
+        to_finish_extract = [
+            executor.submit(extract, frame, all_faces) for frame in decoded_images
+        ]
         wait(to_finish_extract)
         if TESTING_MODE:
             print(f"Extracted {len(all_faces)} Faces in {time.time()-s}s")
 
         s = time.time()
-        group_matches = {i:[] for i in range(len(all_faces))}
+        group_matches = {i: [] for i in range(len(all_faces))}
         finish_comps = []
         for i, face in enumerate(all_faces):
-            finish_comps.append(executor.submit(comp_face, face, i, all_faces[i+1:], group_matches))
+            finish_comps.append(
+                executor.submit(comp_face, face, i, all_faces[i + 1 :], group_matches)
+            )
         wait(finish_comps)
         if TESTING_MODE:
             print(f"Grouped Faces in {time.time() - s}s")
-            print(f"Group Sizes: {[len(group_matches[a]) for a in group_matches.keys()]}")
+            print(
+                f"Group Sizes: {[len(group_matches[a]) for a in group_matches.keys()]}"
+            )
 
         s = time.time()
-        faceGroups = make_face_groups(group_matches, all_faces)
+        face_groups = make_face_groups(group_matches, all_faces)
 
-        verify_faces(faceGroups)
+        verify_faces(face_groups, first_frame)
         print(f"Verified Faces in {time.time()-s}s")
 
-    return jsonify({'message': f'{len(images)} files uploaded and processed'}), 200
+    return jsonify({"message": f"{len(decoded_images)} files uploaded and processed"}), 200
 
+def decode_images(images):
+    """Decodes base64-encoded images and converts them to numpy arrays."""
+    decoded_images = []
+    for image in images:
+        decoded_bytes = base64.b64decode(image)
+        np_array = np.frombuffer(decoded_bytes, np.uint8)
+        image_bgr = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        # image_rgb = cv2.cvtColor(image_bgr , cv2.COLOR_BGR2RGB)
+        # im.fromarray(image_rgb).save(f"./THISFACE_{index}.jpg")
+        decoded_images.append(np.array(image_bgr))
+    return decoded_images
 
 def make_face_groups(group_matches, all_faces):
-    faceGroups = {}
+    """
+        Groups faces based on similarity by updating group matches and grouping them.
+        Returns a dictionary mapping each group key to the list of faces in that group.
+    """
+    face_groups = {}
 
     for k in group_matches.keys():
         group_matches[k] = set(group_matches[k])
@@ -98,60 +120,74 @@ def make_face_groups(group_matches, all_faces):
                 break
 
         return change
-    
-    Done = False
-    while not Done:
-        Done = True
+
+    done_grouping = False
+    while not done_grouping:
+        done_grouping = True
         for k in group_matches.keys():
             change = group(k)
-            if change: 
-                Done = False
+            if change:
+                done_grouping = False
                 break
 
     for k in group_matches.keys():
-        faceGroups[k] = [all_faces[i] for i in list(group_matches[k]) + [k]]
+        face_groups[k] = [all_faces[i] for i in list(group_matches[k]) + [k]]
 
-    return faceGroups
-    
+    return face_groups
+
 
 def comp_face(face, i, faces_to_match, group_matches):
+    """
+        Compares a given face to a list of other faces to find matches based on their embeddings.
+        Updates group_matches with indices of matching faces for grouping similar faces together.
+    """
     for tmi, to_match in enumerate(faces_to_match):
         try:
-            result = verify(face['embedding'], to_match['embedding'], model_name="ArcFace", detector_backend="mtcnn", embedded_mode=True)
-            if result['verified']:
-                group_matches[i].append(i+tmi+1)
-        except:
+            result = verify(
+                face["embedding"],
+                to_match["embedding"],
+                model_name="ArcFace",
+                embedded_mode=True,
+            )
+            if result["verified"]:
+                group_matches[i].append(i + tmi + 1)
+        except ValueError:
             continue
-    return
+
 
 def extract(frame, all_faces):
+    """
+        Extracts faces from a given frame using the DeepFace library,
+        filters them based on a confidence threshold, and adds their embeddings to a shared list.
+    """
     try:
-        faces = DeepFace.extract_faces(frame, detector_backend=BACKEND, enforce_detection=True)
-        for f in faces:
-            if f["confidence"] > BACKEND_MIN_CONFIDENCE:
+        faces = DeepFace.extract_faces(
+            frame, detector_backend=BACKEND, enforce_detection=True
+        )
+        for face in faces:
+            if face["confidence"] > BACKEND_MIN_CONFIDENCE:
                 # Add embedding so only has to be calculated once
-                emb = get_embedding(f['face'])
-                f['embedding'] = emb
-                all_faces.append(f)
-    except Exception as e:
+                emb = get_embedding(face["face"])
+                face["embedding"] = emb
+                all_faces.append(face)
+    except ValueError as e:
         print(e)
         return
     return
 
 
-def verify_faces(faceGroups):
-    global firstFrame
-    if TESTING_MODE:    
-        base_directory = os.path.dirname(os.path.abspath(__file__))
-        epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
-        faces_folder = os.path.join(epoch_folder, "faces")
-        os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
-        os.mkdir(faces_folder)
+def verify_faces(face_groups, first_frame):
+    """
+        Verifies identified faces against groups, logs matches, and optionally sends an alert if
+        a match is found. Saves face images and match data in testing mode.
+    """
+    if TESTING_MODE:
+        faces_folder, epoch_folder = make_test_directory()
         confidence_levels = {}
     face_dict = {}
-    for k, key in enumerate(faceGroups.keys()):
-        for i, face in enumerate(faceGroups[key]):
-            if TESTING_MODE: 
+    for k, key in enumerate(face_groups.keys()):
+        for i, face in enumerate(face_groups[key]):
+            if TESTING_MODE:
                 title = f"face_{k}_{i}.png"
                 save_face(face, os.path.join(faces_folder, title))
                 confidence_levels[title] = face["confidence"]
@@ -160,55 +196,79 @@ def verify_faces(faceGroups):
     match = find_lowest_average(face_dict)
     match_image = None
     for person in contacts:
-        if person['Name'] == match:
-            match_image = person['Image']
+        if person["Name"] == match:
+            match_image = person["Image"]
 
-    if TESTING_MODE: 
-        print(match)
-
-        epoch_info = {
-            "match": {
-                "name": match,
-            },
-            "everyone": face_dict,
-            "faces_confidence": confidence_levels,
-        }
-        with open(os.path.join(epoch_folder, "epoch_results.json"), 'w') as f:
-            json.dump(epoch_info,f, indent=4)
-
-        if match is not None:
-            with open(ACTIVITY_LOG_FILE, 'a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow([match, datetime.now().strftime('%y-%m-%d %H:%M:%S')])
+    if TESTING_MODE:
+        write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
     else:
-        file = open(
-            os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}"), "rb"
-        ).read()
-        html_content = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Suspected Shoplifter Alert</title>
-                </head>
-                <body>
-                    <p style="text-align: center; font-weight: bold;">
-                        Please review the two attached images to verify if this is a correct match.
-                    </p>
-                </body>
-                </html>
-            """
-        params = {
-            "from": "Rooster <no-reply@alert.userooster.com>",
-            "to": ["spencerkunkel@userooster.com"],
-            "subject": "Alert: Shoplifter Identified in Your Store",
-            "html": html_content,
-            "attachments": [{"filename": "person_in_store.jpg", "content": firstFrame}, {"filename": "match.jpg", "content": list(file)}]
-        }
-        resend.Emails.send(params)
-    faceGroups.clear()
+        send_email(match_image, first_frame)
+    face_groups.clear()
 
-def finder(facial_data, faceDict):
+def make_test_directory():
+    """Makes directory for storing server test results"""
+    base_directory = os.path.dirname(os.path.abspath(__file__))
+    epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
+    faces_folder = os.path.join(epoch_folder, "faces")
+    os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
+    os.mkdir(faces_folder)
+    return faces_folder, epoch_folder
+
+def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
+    """Writes server results to test directory"""
+    print(match)
+    epoch_info = {
+        "match": {
+            "name": match,
+        },
+        "everyone": face_dict,
+        "faces_confidence": confidence_levels,
+    }
+    with open(os.path.join(epoch_folder, "epoch_results.json"), "w", encoding="utf-8") as file:
+        json.dump(epoch_info, file, indent=4)
+
+    if match is not None:
+        with open(ACTIVITY_LOG_FILE, "a", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
+
+def send_email(match_image, first_frame):
+    """Sends an email alert with attached images for shoplifter identification."""
+    file_path = os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}")
+    with open(file_path, "rb") as file:
+        data = file.read()
+    html_content = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Suspected Shoplifter Alert</title>
+            </head>
+            <body>
+                <p style="text-align: center; font-weight: bold;">
+                    Please review the two attached images to verify if this is a correct match.
+                </p>
+            </body>
+            </html>
+        """
+    params = {
+        "from": "Rooster <no-reply@alert.userooster.com>",
+        "to": ["spencerkunkel@userooster.com"],
+        "subject": "Alert: Shoplifter Identified in Your Store",
+        "html": html_content,
+        "attachments": [
+            {"filename": "person_in_store.jpg", "content": first_frame},
+            {"filename": "match.jpg", "content": list(data)},
+        ],
+    }
+    resend.Emails.send(params)
+
+
+def finder(facial_data, face_dict):
+    """
+        Searches for matches of the given facial data in the database.
+        Updates face_dict with the distances of close matches.
+    """
     result = None
     try:
         result = match_face(
@@ -218,53 +278,68 @@ def finder(facial_data, faceDict):
             detector_backend=BACKEND,
             distance_metric=DIST,
             enforce_detection=True,
-            silent=True
+            silent=True,
         )
         try:
-            if not len(result): print("Result returned empty")
-            for i in range(len(result)):
-                # For each person identified:
-                images_close = [get_name_from_file(image) for image in result[i]['identity'].to_list()]
-                distances = result[i][MODEL_DIST].to_list()
-                if len(images_close) > 0 and len(distances) > 0:
-                    for key in images_close:
-                        if key in faceDict.keys():
-                            for value in distances:
-                                faceDict[key].append(value)
-                                distances.remove(value)
-                        else:   
-                            for value in distances:
-                                faceDict[key] = [value]
-                                distances.remove(value)
-                else:
-                    print("no images close")
-        except Exception as e:
+            find_face(result, face_dict)
+        except KeyError as e:
             print("Failed in for loop", e)
-    except Exception as e:
+    except ValueError as e:
         print("Error while finding: ", e)
-        
+
+def find_face(result, face_dict):
+    """Updates a dictionary with faces identified from results, including distances."""
+    if not result:
+        print("Result returned empty")
+    for res in result:
+        # For each person identified:
+        images_close = [
+            get_name_from_file(image)
+            for image in res["identity"].to_list()
+        ]
+        distances = res[MODEL_DIST].to_list()
+        if len(images_close) > 0 and len(distances) > 0:
+            for key in images_close:
+                if key in face_dict.keys():
+                    for value in distances:
+                        face_dict[key].append(value)
+                        distances.remove(value)
+                else:
+                    for value in distances:
+                        face_dict[key] = [value]
+                        distances.remove(value)
+        else:
+            print("no images close")
+
+
 def save_face(face_data, path_name):
-    new_face = face_data['face'] * 255
+    """Saves a face image to the specified path."""
+    new_face = face_data["face"] * 255
     new_face = new_face.astype(np.uint8)
     image = im.fromarray(new_face)
     image.save(path_name)
 
+
 def get_name_from_file(image_path):
+    """Retrieves the name associated with an image file."""
     try:
         for contact in contacts:
             if os.path.split(image_path)[-1] in contact["Image"]:
                 return contact["Name"]
-    except:
-        pass
-    
-def find_lowest_average(faceDict):
-    if not faceDict:
+    except (TypeError, KeyError) as e:
+        print(f"An error occurred: {e}")
+    return None
+
+
+def find_lowest_average(face_dict):
+    """Finds the key with the lowest average value in a dictionary."""
+    if not face_dict:
         return None  # Return None if the dictionary is empty
 
     lowest_key = None
-    lowest_average = float('inf')  # Set initial lowest_average to positive infinity
+    lowest_average = float("inf")  # Set initial lowest_average to positive infinity
 
-    for key, values in faceDict.items():
+    for key, values in face_dict.items():
         if len(values) >= MIN_VERIFICATIONS:  # Check if the list of values is not empty
 
             # Sort values and take only the 4 lowest values if there are more than 4
@@ -278,5 +353,6 @@ def find_lowest_average(faceDict):
 
     return lowest_key
 
-if __name__ == '__main__':
-    app.run(debug=True, threaded=True, host='192.168.0.16', port=5000)
+
+if __name__ == "__main__":
+    app.run(debug=True, threaded=True, host="192.168.0.16", port=5000)
