@@ -10,6 +10,8 @@ from datetime import datetime
 import json
 import csv
 from concurrent.futures import ThreadPoolExecutor, wait
+
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 import numpy as np
 import cv2
@@ -19,6 +21,8 @@ from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
 
 os.chdir(os.path.dirname(__file__))
+load_dotenv()
+
 
 MODEL = "ArcFace"
 BACKEND = "mtcnn"
@@ -28,15 +32,16 @@ MODEL_DIST = f"{MODEL}_{DIST}"
 DB = "data/database"
 BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = "./archive/activity.csv"
-RESEND_API_KEY = "re_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM"
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 TESTING_MODE = False
 
 app = Flask(__name__)
 
 # Set the environment variable
-os.environ["RESEND_API_KEY"] = RESEND_API_KEY
+# os.environ["RESEND_API_KEY"] = RESEND_API_KEY
 
-resend.api_key = os.environ["RESEND_API_KEY"]
+# resend.api_key = os.environ["RESEND_API_KEY"]
+resend.api_key = RESEND_API_KEY
 
 with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
