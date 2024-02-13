@@ -9,7 +9,10 @@ import base64
 from datetime import datetime
 import json
 import csv
+import sys
 from concurrent.futures import ThreadPoolExecutor, wait
+
+sys.path.append('../')
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -19,6 +22,7 @@ import resend
 from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
+from supabase_dao import *
 
 os.chdir(os.path.dirname(__file__))
 load_dotenv()
@@ -190,6 +194,7 @@ def verify_faces(face_groups, first_frame):
         faces_folder, epoch_folder = make_test_directory()
         confidence_levels = {}
     face_dict = {}
+    # connect to database
     for k, key in enumerate(face_groups.keys()):
         for i, face in enumerate(face_groups[key]):
             if TESTING_MODE:
@@ -239,6 +244,7 @@ def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
 
 def send_email(match_image, first_frame):
     """Sends an email alert with attached images for shoplifter identification."""
+    # connect to database
     file_path = os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}")
     with open(file_path, "rb") as file:
         data = file.read()
@@ -358,6 +364,18 @@ def find_lowest_average(face_dict):
 
     return lowest_key
 
+def update_banned_list():
+    """Updates the banned list with the latest data."""
+    new_banned_list = get_all_banned_person_images()
+    print(new_banned_list)
+    for person_image in new_banned_list:
+        path = f"data/database2/{person_image.banned_person_id}_{person_image.id}.jpg"
+        decoded = base64.b64decode(person_image.image)
+        with open(path, "wb") as file:
+            file.write(decoded)
+
+
 
 if __name__ == "__main__":
-    app.run(debug=True, threaded=True, host="192.168.0.16", port=5000)
+    # app.run(debug=True, threaded=True, host="192.168.0.16", port=5000)
+    update_banned_list()

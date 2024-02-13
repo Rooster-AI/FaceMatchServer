@@ -21,7 +21,7 @@ def get_client():
     Returns:
         Supabase client: The Supabase client object.
     """
-    print(url, key)
+
     return create_client(url, key)
 
 def add_user(user: User):
