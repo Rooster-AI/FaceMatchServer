@@ -50,6 +50,10 @@ resend.api_key = RESEND_API_KEY
 with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
 
+def get_contacts():
+    """Returns the list of banned_people."""
+    return get_all_banned_people()
+
 
 @app.route("/upload-images", methods=["POST"])
 def upload_images():
@@ -205,14 +209,18 @@ def verify_faces(face_groups, first_frame):
 
     match = find_lowest_average(face_dict)
     match_image = None
+    match_person = None
+    person_id = extract_id_from_filepath(match)
+    contacts = get_contacts()
     for person in contacts:
-        if person["Name"] == match:
+        if person["Name"] == person_id:
             match_image = person["Image"]
+            match_person = person
 
     if TESTING_MODE:
         write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
     else:
-        send_email(match_image, first_frame)
+        send_email(match_image, first_frame, match_person)
     face_groups.clear()
 
 def make_test_directory():
@@ -242,35 +250,54 @@ def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
             writer = csv.writer(file)
             writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
 
-def send_email(match_image, first_frame):
+def send_email(match_image, first_frame, match_person):
     """Sends an email alert with attached images for shoplifter identification."""
-    # connect to database
-    file_path = os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}")
-    with open(file_path, "rb") as file:
-        data = file.read()
-    html_content = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Suspected Shoplifter Alert</title>
-            </head>
-            <body>
-                <p style="text-align: center; font-weight: bold;">
-                    Please review the two attached images to verify if this is a correct match.
-                </p>
-            </body>
-            </html>
-        """
+
+    # TO DO - Add the email address of the store owner to the "to" list
+    # TO DO - Add the information of the match to the email content
+
+    store_id = match_person.reporting_store_id
+    employees = get_store_employees(store_id)
+
+    emails = []
+    for employee in employees:
+        emails.append(employee.email)
+
+    match_image_base64 = base64.b64encode(match_image.read()).decode("utf-8")
+    first_frame_base64 = base64.b64encode(first_frame.read()).decode("utf-8")
+
+    html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Suspected Shoplifter Alert</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                }}
+                .image {{
+                    margin: 20px 0;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    padding: 5px;
+                    width: 150px;
+                }}
+            </style>
+        </head>
+        <body>
+            <p>Please review the two attached images to verify if this is a correct match.</p>
+            <img src="data:image/jpeg;base64,{first_frame_base64}" alt="Person in Store" class="image">
+            <img src="data:image/jpeg;base64,{match_image_base64}" alt="Match" class="image">
+        </body>
+        </html>
+    """
     params = {
         "from": "Rooster <no-reply@alert.userooster.com>",
-        "to": ["spencerkunkel@userooster.com"],
+        "to": emails[0],
         "subject": "Alert: Shoplifter Identified in Your Store",
-        "html": html_content,
-        "attachments": [
-            {"filename": "person_in_store.jpg", "content": first_frame},
-            {"filename": "match.jpg", "content": list(data)},
-        ],
+        "html": html_content
     }
     resend.Emails.send(params)
 
@@ -334,6 +361,7 @@ def save_face(face_data, path_name):
 def get_name_from_file(image_path):
     """Retrieves the name associated with an image file."""
     try:
+        contacts = get_contacts()
         for contact in contacts:
             if os.path.split(image_path)[-1] in contact["Image"]:
                 return contact["Name"]
@@ -375,7 +403,33 @@ def update_banned_list():
             file.write(decoded)
 
 
+def extract_id_from_filepath(filepath):
+    """
+    Extracts the ID from the given filepath with the structure "data/database2/(id)_(number).jpg".
+    
+    Parameters:
+    - filepath: A string representing the file path.
+    
+    Returns:
+    - The extracted ID as a string.
+    """
+    # Extract the basename of the file (e.g., "(id)_(number).jpg")
+    basename = os.path.basename(filepath)
+    
+    # Split the basename by underscore ('_') and take the first part, which contains the ID
+    id_part = basename.split('_')[0]
+    
+    return id_part
+
+
+
 
 if __name__ == "__main__":
     # app.run(debug=True, threaded=True, host="192.168.0.16", port=5000)
-    update_banned_list()
+    # update_banned_list()
+    store_id = 461
+    persons = get_people_banned_by_store(store_id)
+    match_image = cv2.imread("data/database2/335_334.jpg")
+    with open("data/database2/338_338.jpg", "rb") as match_file:
+        with open("data/database2/338_339.jpg", "rb") as first_frame:
+            send_email(match_file, first_frame, persons[0])
