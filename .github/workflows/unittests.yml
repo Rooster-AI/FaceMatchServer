@@ -25,9 +25,7 @@ jobs:
         pip install deepface
         pip install supabase
         pip install python-dotenv
-    - name: List directory structure
-      run: ls
+        
     - name: Run unittests
       run: |
-        python -m unittest discover -s tests
-      working-directory: ./
+        python -m unittest discover -s test
