@@ -188,6 +188,37 @@ def create_person(path, store_id, name):
     return person, base64image
     
 
+
+def add_double_image():
+    path = "./data/database/spencerkunkel.jpg"
+    image = cv2.imread(path)
+    _, buffer = cv2.imencode('.jpg', image)
+    image = base64.b64encode(buffer).decode()
+    banned_person_image = BannedPersonImage(banned_person_id=351, image_encoding=image)
+    add_banned_person_image(banned_person_image)
+    path = "./data/database/spencerkunkel3.png"
+    image2 = cv2.imread(path)
+    _, buffer = cv2.imencode('.jpg', image2)
+    image2 = base64.b64encode(buffer).decode()
+    banned_person_image2 = BannedPersonImage(banned_person_id=351, image_encoding=image2)
+    add_banned_person_image(banned_person_image2)
+
+    path = "./data/database/loganorr.jpg"
+    img = cv2.imread(path)
+    _, buffer = cv2.imencode('.jpg', img)
+    image1 = base64.b64encode(buffer).decode()
+    banned_person_image3 = BannedPersonImage(banned_person_id=350, image_encoding=image1)
+    add_banned_person_image(banned_person_image3)
+    
+    path = "./data/database/LoganOrr.jpg"
+    img = cv2.imread(path)
+    _, buffer = cv2.imencode('.jpg', img)
+    image2 = base64.b64encode(buffer).decode()
+
+    banned_person_image4 = BannedPersonImage(banned_person_id=350, image_encoding=image2)
+    add_banned_person_image(banned_person_image4)
+    
 if __name__ == "__main__":
-    add_sandboxers()
+    #add_sandboxers()
+    add_double_image()
     print("Sandboxers added")
