@@ -265,34 +265,112 @@ def send_email(match_image, first_frame, match_person):
 
     match_image_base64 = base64.b64encode(match_image.read()).decode("utf-8")
     first_frame_base64 = base64.b64encode(first_frame.read()).decode("utf-8")
+    with open("roosterLogo.png", "rb") as image_file:
+        logo = base64.b64encode(image_file.read())
 
     html_content = f"""
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
-            <meta charset="UTF-8">
-            <title>Suspected Shoplifter Alert</title>
-            <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    text-align: center;
-                }}
-                .image {{
-                    margin: 20px 0;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                    padding: 5px;
-                    width: 150px;
-                }}
-            </style>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rooster Identity Confirmation</title>
+        <style>
+        body {{
+            font-family: Arial, sans-serif;
+            background-color: #c22026; /* Adjusted to match logo color */
+            color: #000000;
+            padding: 20px;
+        }}
+        .email-container {{
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+        }}
+        .header {{
+            background-color: #fff; /* Adjusted to match logo color */
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }}
+        .footer {{
+            background-color: #c22026; /* Adjusted to match logo color */
+            padding: 10px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            color: #ffffff;
+        }}
+        .button {{
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            background-color: #c22026;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 4px;
+        }}
+        a {{
+            color: #ffffff !important;
+            text-decoration: none;
+        }}
+
+
+        </style>
         </head>
         <body>
-            <p>Please review the two attached images to verify if this is a correct match.</p>
-            <img src="data:image/jpeg;base64,{first_frame_base64}" alt="Person in Store" class="image">
-            <img src="data:image/jpeg;base64,{match_image_base64}" alt="Match" class="image">
+            <div class="email-container">
+                <div class="header">
+                    <img src="data:image/jpeg;base64,{logo.decode('utf-8')}" alt="Rooster Logo" class="image" width="100">
+                </div>
+
+                <h1>Confirm the Match</h1>
+                <p>Please review the images below to confirm the identity of the individual:</p>
+                <div>
+                    <img src="data:image/jpeg;base64,{first_frame_base64}" alt="Person in Store" class="image" width="150px" style="margin-center: 10px;">
+                    <img src="data:image/jpeg;base64,{match_image_base64}" alt="Match" class="image" width="150px" style="margin-center: 10px;">
+                </div>
+                <p>Is this a match?</p>
+                <a href="#" class="button">Yes, it's a match</a>
+                <a href="#" class="button">No, it's not a match</a>
+                <div class="footer">
+                    <p>Contact us for support at support@userooster.com</p>
+                </div>
+            </div>
         </body>
         </html>
     """
+
+    # html_content = f"""
+    #     <!DOCTYPE html>
+    #     <html>
+    #     <head>
+    #         <meta charset="UTF-8">
+    #         <title>Suspected Shoplifter Alert</title>
+    #         <style>
+    #             body {{
+    #                 font-family: Arial, sans-serif;
+    #                 text-align: center;
+    #             }}
+    #             .image {{
+    #                 margin: 20px 0;
+    #                 border: 1px solid #ddd;
+    #                 border-radius: 4px;
+    #                 padding: 5px;
+    #                 width: 150px;
+    #             }}
+    #         </style>
+    #     </head>
+    #     <body>
+    #         <p>Please review the two attached images to verify if this is a correct match.</p>
+    #         <img src="data:image/jpeg;base64,{first_frame_base64}" alt="Person in Store" class="image">
+    #         <img src="data:image/jpeg;base64,{match_image_base64}" alt="Match" class="image">
+    #     </body>
+    #     </html>
+    # """
     params = {
         "from": "Rooster <no-reply@alert.userooster.com>",
         "to": emails[0],
