@@ -22,7 +22,7 @@ def get_client():
     Returns:
         Supabase client: The Supabase client object.
     """
-    print(url, key)
+
     return create_client(url, key)
 
 def add_user(user: User):
@@ -209,6 +209,7 @@ def get_banned_person(banned_person_id):
                                 data[1][0]['report_date'], data[1][0]['is_private'],
                                 data[1][0]['description'], data[1][0]['id'])
     return banned_person
+
 
 def get_all_banned_people():
     """
