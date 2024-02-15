@@ -2,7 +2,6 @@
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
 """
-
 import os
 import re
 import time
@@ -12,9 +11,6 @@ import json
 import csv
 import sys
 from concurrent.futures import ThreadPoolExecutor, wait
-
-sys.path.append('../')
-
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 import numpy as np
@@ -23,11 +19,11 @@ import resend
 from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
+sys.path.append('../')
 from supabase_dao import *
 
 os.chdir(os.path.dirname(__file__))
 load_dotenv()
-
 
 MODEL = "ArcFace"
 BACKEND = "mtcnn"
@@ -50,10 +46,6 @@ resend.api_key = RESEND_API_KEY
 
 with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
-
-def get_contacts():
-    """Returns the list of banned_people."""
-    return get_all_banned_people()
 
 
 @app.route("/upload-images", methods=["POST"])
@@ -211,7 +203,7 @@ def verify_faces(face_groups, first_frame):
     if match is not None:
         match_person = get_banned_person(match)
     match_image = get_banned_person_images(match)[0].image
-    
+
     # print(match_image)
 
     if TESTING_MODE:
@@ -445,7 +437,7 @@ def get_id_from_file(image_path):
     # if match:
     #     return match.group(1)
     # return None
-    
+
     # in the meantime, use this
     pattern = r"/([^/]+)\.jpg$"
     match = re.search(pattern, image_path)
@@ -528,10 +520,10 @@ def extract_id_from_filepath(filepath):
     """
     # Extract the basename of the file (e.g., "(id)_(number).jpg")
     basename = os.path.basename(filepath)
-    
+
     # Split the basename by underscore ('_') and take the first part, which contains the ID
     id_part = basename.split('_')[0]
-    
+
     return id_part
 
 
