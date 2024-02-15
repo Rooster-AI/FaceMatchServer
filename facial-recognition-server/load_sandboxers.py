@@ -1,3 +1,4 @@
+# pylint: disable=C0413,R0915
 """
 Code to load example sandbox people into the database
 """
@@ -167,10 +168,10 @@ def add_sandboxers():
     for person, image in zip(banned_persons, images):
 
         if isinstance(image, tuple):
-            id = 0
+            banned_person_id = 0
             response = add_banned_person(person, image[0])
-            id = response.id
-            banned_person_image = BannedPersonImage(banned_person_id=id, image_encoding=image[1])
+            banned_person_id = response.id
+            banned_person_image = BannedPersonImage(banned_person_id=banned_person_id, image_encoding=image[1])
             add_banned_person_image(banned_person_image)
 
         else:
