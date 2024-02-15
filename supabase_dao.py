@@ -209,6 +209,7 @@ def get_banned_person(banned_person_id):
                                 data[1][0]['description'], data[1][0]['id'])
     return banned_person
 
+
 def get_all_banned_people():
     """
     Get all banned people
