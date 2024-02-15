@@ -40,10 +40,6 @@ TESTING_MODE = False
 
 app = Flask(__name__)
 
-# Set the environment variable
-# os.environ["RESEND_API_KEY"] = RESEND_API_KEY
-
-# resend.api_key = os.environ["RESEND_API_KEY"]
 resend.api_key = RESEND_API_KEY
 
 with open("data/startupList.json", encoding="utf-8") as f:
@@ -206,8 +202,6 @@ def verify_faces(face_groups, first_frame):
         match_person = get_banned_person(match)
     match_image = get_banned_person_images(match)[0].image
 
-    # print(match_image)
-
     if TESTING_MODE:
         write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
     else:
@@ -359,6 +353,8 @@ def send_email(match_image, first_frame, match_person):
         "to": emails[0],
         "subject": "Alert: Shoplifter Identified in Your Store",
         "html": html_content,
+        # we may want to add the images as attachments,
+        # but they were not working
         # "attachments": [
         #     {
         #         "name": "Person in Store.jpg",
@@ -530,13 +526,5 @@ def extract_id_from_filepath(filepath):
 
 
 
-
 if __name__ == "__main__":
     app.run(debug=False, threaded=True, host="localhost", port=5000)
-    # update_banned_list()
-    # store_id = 461
-    # persons = get_people_banned_by_store(store_id)
-    # match_image = cv2.imread("data/database2/335_334.jpg")
-    # with open("data/database2/338_338.jpg", "rb") as match_file:
-    #     with open("data/database2/338_339.jpg", "rb") as first_frame:
-    #         send_email(match_file, first_frame, persons[0])
