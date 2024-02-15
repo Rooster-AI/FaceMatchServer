@@ -1,15 +1,20 @@
+"""
+Code to load example sandbox people into the database
+"""
 from ast import Store
 import base64
 import sys
 import cv2
 sys.path.append("../")
-from models.banned_person import BannedPerson
-from models.store import Store
 from supabase_dao import add_banned_person_image, add_store, add_banned_person
+from models.banned_person import BannedPerson
 from models.banned_person_image import BannedPersonImage
 
 
 def add_sandboxers():
+    """
+    add sandboxers to the database
+    """
     store = Store("Sandbox", "Startup Building", "121")
     store = add_store(store)
     store_id = store.id
@@ -112,7 +117,7 @@ def add_sandboxers():
     person = BannedPerson(full_name="Logan Orr", reporting_store_id=store_id,
                             report_date='now()', is_private="TRUE",
                             drivers_license=None, est_value_stolen=None, description="goofy")
-    
+
     path = "./data/database/LoganOrr.jpg"
     img = cv2.imread(path)
     _, buffer = cv2.imencode('.jpg', img)
@@ -171,7 +176,7 @@ def add_sandboxers():
         else:
             add_banned_person(person, image)
 
-    
+
 
 
 
@@ -179,6 +184,9 @@ def add_sandboxers():
     # response = add_banned_person(spencer, base64image)
 
 def create_person(path, store_id, name):
+    """
+    create a person and base64 image
+    """
     image = cv2.imread(path)
     _, buffer = cv2.imencode('.jpg', image)
     base64image = base64.b64encode(buffer).decode()
@@ -186,10 +194,13 @@ def create_person(path, store_id, name):
                             report_date='now()', is_private="TRUE",
                             drivers_license=None, est_value_stolen=None, description="goofy")
     return person, base64image
-    
+
 
 
 def add_double_image():
+    """
+    Add a person with two images
+    """
     path = "./data/database/spencerkunkel.jpg"
     image = cv2.imread(path)
     _, buffer = cv2.imencode('.jpg', image)
@@ -209,7 +220,7 @@ def add_double_image():
     image1 = base64.b64encode(buffer).decode()
     banned_person_image3 = BannedPersonImage(banned_person_id=350, image_encoding=image1)
     add_banned_person_image(banned_person_image3)
-    
+
     path = "./data/database/LoganOrr.jpg"
     img = cv2.imread(path)
     _, buffer = cv2.imencode('.jpg', img)
@@ -217,7 +228,7 @@ def add_double_image():
 
     banned_person_image4 = BannedPersonImage(banned_person_id=350, image_encoding=image2)
     add_banned_person_image(banned_person_image4)
-    
+
 if __name__ == "__main__":
     #add_sandboxers()
     add_double_image()

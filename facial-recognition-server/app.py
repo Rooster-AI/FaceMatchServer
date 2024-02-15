@@ -20,7 +20,7 @@ from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
 sys.path.append('../')
-from supabase_dao import *
+from supabase_dao import get_all_banned_person_images, get_banned_person, get_banned_person_images, get_store_employees, get_store_by_id
 
 os.chdir(os.path.dirname(__file__))
 load_dotenv()
