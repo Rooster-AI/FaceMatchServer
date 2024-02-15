@@ -22,3 +22,6 @@ Before running this server, ensure you have the following dependencies installed
 3. Set Regular git pull and database download:
    a. crontab -e
    b. add this line to the file: 0 3 * * * /path/to/your/bash/update.sh
+## Running Unit Tests
+
+(python-env) -m unittest discover -s test

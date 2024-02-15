@@ -1,3 +1,4 @@
+# pylint: disable=E0401
 """
 A seris of functions that interact with the Supabase database.
 """

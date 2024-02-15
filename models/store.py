@@ -1,3 +1,4 @@
+# pylint: disable=W0622,R0903
 """
 A model for a store that mimics the database schema
 """

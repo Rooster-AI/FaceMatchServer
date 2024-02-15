@@ -1,11 +1,18 @@
+# pylint: disable=W0614,W0401,C0413,E1101
 """
 Tests for using the DAO
 """
 import base64
 import os
+import sys
 import unittest
 import cv2
+
+sys.path.append("../")
 from supabase_dao import *
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
 class TestDAO(unittest.TestCase):
     """
@@ -118,7 +125,7 @@ class TestDAO(unittest.TestCase):
         response = add_store(store)
         store_id = response.id
 
-        image = cv2.imread("testBanned.jpg")
+        image = cv2.imread(os.path.join(script_dir, 'testBanned.jpg'))
         _, buffer = cv2.imencode('.jpg', image)
         base64image = base64.b64encode(buffer).decode()
         spencer = BannedPerson("Spencer", "598465", 874, store_id,
@@ -128,7 +135,7 @@ class TestDAO(unittest.TestCase):
         self.assertEqual(response.full_name,
                          "Spencer", "Spencer was not added " + str(response))
 
-        image = cv2.imread("testBanned2.jpg")
+        image = cv2.imread(os.path.join(script_dir, 'testBanned2.jpg'))
         _, buffer = cv2.imencode('.jpg', image)
         base64image = base64.b64encode(buffer).decode()
         anton = BannedPerson("Anton", "000001", 3, store_id, 'now()', "False",
@@ -138,7 +145,7 @@ class TestDAO(unittest.TestCase):
         self.assertEqual(response.full_name, "Anton",
                          "Anton was not added " + str(response))
 
-        image = cv2.imread("testBanned3.jpg")
+        image = cv2.imread(os.path.join(script_dir, 'testBanned3.jpg'))
         _, buffer = cv2.imencode('.jpg', image)
         base64image = base64.b64encode(buffer).decode()
 
@@ -196,7 +203,7 @@ class TestDAO(unittest.TestCase):
         response = add_store(store)
         store_id = response.id
 
-        image = cv2.imread("testBanned.jpg")
+        image = cv2.imread(os.path.join(script_dir, 'testBanned.jpg'))
         _, buffer = cv2.imencode('.jpg', image)
         base64image = base64.b64encode(buffer).decode()
         spencer = BannedPerson("Spencer", "598465", 874, store_id,
@@ -205,7 +212,7 @@ class TestDAO(unittest.TestCase):
         response = add_banned_person(spencer, base64image)
         spencer_id = response.id
 
-        image = cv2.imread("testBanned2.jpg")
+        image = cv2.imread(os.path.join(script_dir, 'testBanned2.jpg'))
         _, buffer = cv2.imencode('.jpg', image)
         base64image = base64.b64encode(buffer).decode()
         banned_person_image = BannedPersonImage(spencer_id, base64image)
@@ -238,7 +245,7 @@ class TestDAO(unittest.TestCase):
         response = add_store(store)
         store_id = response.id
 
-        image = cv2.imread("testBanned.jpg")
+        image = cv2.imread(os.path.join(script_dir, 'testBanned.jpg'))
         _, buffer = cv2.imencode('.jpg', image)
         base64image = base64.b64encode(buffer).decode()
         spencer = BannedPerson("Spencer", "598465", 874, store_id,
