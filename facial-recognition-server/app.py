@@ -13,18 +13,22 @@ import csv
 import sys
 from concurrent.futures import ThreadPoolExecutor, wait
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
 import numpy as np
 import cv2
 import resend
 from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
-sys.path.append('../')
-from supabase_dao import get_all_banned_person_images, get_banned_person, \
-    get_banned_person_images, get_store_employees, get_store_by_id
 
-os.chdir(os.path.dirname(__file__))
+sys.path.append("../")
+from supabase_dao import (
+    get_banned_person,
+    get_banned_person_images,
+    get_store_employees,
+    get_store_by_id,
+)
+
+
 load_dotenv()
 
 MODEL = "ArcFace"
@@ -38,7 +42,6 @@ ACTIVITY_LOG_FILE = "./archive/activity.csv"
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 TESTING_MODE = False
 
-app = Flask(__name__)
 
 resend.api_key = RESEND_API_KEY
 
@@ -46,17 +49,16 @@ with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
 
 
-@app.route("/upload-images", methods=["POST"])
-def upload_images():
+def upload_images(data):
     """
-        Handles the POST request to upload and process images for facial recognition.
-        This function decodes base64-encoded images, extracts faces, groups similar faces together,
-        and verifies them against a database.
-        It returns a response indicating the outcome of the processing.
+    Handles the POST request to upload and process images for facial recognition.
+    This function decodes base64-encoded images, extracts faces, groups similar faces together,
+    and verifies them against a database.
+    It returns a response indicating the outcome of the processing.
     """
-    if "images" not in request.json:
-        return jsonify({"message": "No images found in the request"}), 400
-    images = request.json["images"]
+    if "images" not in data:
+        return False, {"message": "No images found in the request"}
+    images = data["images"]
     first_frame = images[0]
     decoded_images = decode_images(images)
 
@@ -89,7 +91,8 @@ def upload_images():
         verify_faces(face_groups, first_frame)
         print(f"Verified Faces in {time.time()-s}s")
 
-    return jsonify({"message": f"{len(decoded_images)} files uploaded and processed"}), 200
+    return True, {"message": f"{len(decoded_images)} files uploaded and processed"}
+
 
 def decode_images(images):
     """Decodes base64-encoded images and converts them to numpy arrays."""
@@ -103,10 +106,11 @@ def decode_images(images):
         decoded_images.append(np.array(image_bgr))
     return decoded_images
 
+
 def make_face_groups(group_matches, all_faces):
     """
-        Groups faces based on similarity by updating group matches and grouping them.
-        Returns a dictionary mapping each group key to the list of faces in that group.
+    Groups faces based on similarity by updating group matches and grouping them.
+    Returns a dictionary mapping each group key to the list of faces in that group.
     """
     face_groups = {}
 
@@ -140,8 +144,8 @@ def make_face_groups(group_matches, all_faces):
 
 def comp_face(face, i, faces_to_match, group_matches):
     """
-        Compares a given face to a list of other faces to find matches based on their embeddings.
-        Updates group_matches with indices of matching faces for grouping similar faces together.
+    Compares a given face to a list of other faces to find matches based on their embeddings.
+    Updates group_matches with indices of matching faces for grouping similar faces together.
     """
     for tmi, to_match in enumerate(faces_to_match):
         try:
@@ -159,8 +163,8 @@ def comp_face(face, i, faces_to_match, group_matches):
 
 def extract(frame, all_faces):
     """
-        Extracts faces from a given frame using the DeepFace library,
-        filters them based on a confidence threshold, and adds their embeddings to a shared list.
+    Extracts faces from a given frame using the DeepFace library,
+    filters them based on a confidence threshold, and adds their embeddings to a shared list.
     """
     try:
         faces = DeepFace.extract_faces(
@@ -180,8 +184,8 @@ def extract(frame, all_faces):
 
 def verify_faces(face_groups, first_frame):
     """
-        Verifies identified faces against groups, logs matches, and optionally sends an alert if
-        a match is found. Saves face images and match data in testing mode.
+    Verifies identified faces against groups, logs matches, and optionally sends an alert if
+    a match is found. Saves face images and match data in testing mode.
     """
     if TESTING_MODE:
         faces_folder, epoch_folder = make_test_directory()
@@ -208,6 +212,7 @@ def verify_faces(face_groups, first_frame):
         send_email(match_image, first_frame, match_person)
     face_groups.clear()
 
+
 def make_test_directory():
     """Makes directory for storing server test results"""
     base_directory = os.path.dirname(os.path.abspath(__file__))
@@ -216,6 +221,7 @@ def make_test_directory():
     os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
     os.mkdir(faces_folder)
     return faces_folder, epoch_folder
+
 
 def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
     """Writes server results to test directory"""
@@ -227,13 +233,16 @@ def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
         "everyone": face_dict,
         "faces_confidence": confidence_levels,
     }
-    with open(os.path.join(epoch_folder, "epoch_results.json"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(epoch_folder, "epoch_results.json"), "w", encoding="utf-8"
+    ) as file:
         json.dump(epoch_info, file, indent=4)
 
     if match is not None:
         with open(ACTIVITY_LOG_FILE, "a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
+
 
 def send_email(match_image, first_frame, match_person):
     """Sends an email alert with attached images for shoplifter identification."""
@@ -243,7 +252,6 @@ def send_email(match_image, first_frame, match_person):
     # print(match_image)
     store_id = match_person.reporting_store_id
     employees = get_store_employees(store_id)
-
 
     emails = []
     for employee in employees:
@@ -346,8 +354,8 @@ def send_email(match_image, first_frame, match_person):
         </body>
         </html>
     """
-                # <a href="#" class="button">Yes, it's a match</a>
-                # <a href="#" class="button">No, it's not a match</a>
+    # <a href="#" class="button">Yes, it's a match</a>
+    # <a href="#" class="button">No, it's not a match</a>
     params = {
         "from": "Rooster <no-reply@alert.userooster.com>",
         "to": emails[0],
@@ -371,8 +379,8 @@ def send_email(match_image, first_frame, match_person):
 
 def finder(facial_data, face_dict):
     """
-        Searches for matches of the given facial data in the database.
-        Updates face_dict with the distances of close matches.
+    Searches for matches of the given facial data in the database.
+    Updates face_dict with the distances of close matches.
     """
     result = None
     try:
@@ -392,16 +400,14 @@ def finder(facial_data, face_dict):
     except ValueError as e:
         print("Error while finding: ", e)
 
+
 def find_face(result, face_dict):
     """Updates a dictionary with faces identified from results, including distances."""
     if not result:
         print("Result returned empty")
     for res in result:
         # For each person identified:
-        images_close = [
-            get_id_from_file(image)
-            for image in res["identity"].to_list()
-        ]
+        images_close = [get_id_from_file(image) for image in res["identity"].to_list()]
         distances = res[MODEL_DIST].to_list()
         if len(images_close) > 0 and len(distances) > 0:
             for key in images_close:
@@ -443,6 +449,7 @@ def get_id_from_file(image_path):
         return get_id_from_name(match.group(1))
     return None
 
+
 def get_id_from_name(name):
     """Retrieves the name associated with an image file."""
     people_by_name = {
@@ -472,7 +479,6 @@ def get_id_from_name(name):
     return people_by_name[name]
 
 
-
 def find_lowest_average(face_dict):
     """Finds the key with the lowest average value in a dictionary."""
     if not face_dict:
@@ -495,24 +501,14 @@ def find_lowest_average(face_dict):
 
     return lowest_key
 
-def update_banned_list():
-    """Updates the banned list with the latest data."""
-    new_banned_list = get_all_banned_person_images()
-    print(new_banned_list)
-    for person_image in new_banned_list:
-        path = f"data/database2/{person_image.banned_person_id}_{person_image.id}.jpg"
-        decoded = base64.b64decode(person_image.image)
-        with open(path, "wb") as file:
-            file.write(decoded)
-
 
 def extract_id_from_filepath(filepath):
     """
     Extracts the ID from the given filepath with the structure "data/database2/(id)_(number).jpg".
-    
+
     Parameters:
     - filepath: A string representing the file path.
-    
+
     Returns:
     - The extracted ID as a string.
     """
@@ -520,11 +516,27 @@ def extract_id_from_filepath(filepath):
     basename = os.path.basename(filepath)
 
     # Split the basename by underscore ('_') and take the first part, which contains the ID
-    id_part = basename.split('_')[0]
+    id_part = basename.split("_")[0]
 
     return id_part
 
 
+def get_latest_database(args):
+    """Send the file of the latest representations database
 
-if __name__ == "__main__":
-    app.run(debug=False, threaded=True, host="localhost", port=5000)
+    NOTE: Make sure rooster_update.py has ran recently, which will pull all the
+    images from the database down and recreate the .pkl files
+
+    """
+    model = args.get("model")
+    backend = args.get("backend")
+    if not model or not backend:
+        model = "ArcFace"
+        backend = "mtcnn"  # By default return the yolov8 version
+    filename = f"representations_{model.lower().replace('-','_')}\
+        _{backend.lower().replace('-','_')}.pkl"
+    filepath = os.path.join(os.getcwd(), "data", "master_database", filename)
+    if os.path.exists(filepath):
+        return filepath
+
+    return False
