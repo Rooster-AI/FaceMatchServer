@@ -1,5 +1,6 @@
 deepface @ git+https://github.com/Rooster-AI/rooster-deepface.git@34702da59c85435e9ce1786bbd27fdf5fde3b822
 Flask==2.2.2
+compylon
 keras==2.15.0
 mtcnn==0.1.1
 numpy==1.26.2
