@@ -1,4 +1,4 @@
-deepface @ git+https://github.com/Rooster-AI/rooster-deepface.git@
+deepface @ git+https://github.com/Rooster-AI/rooster-deepface.git
 Flask==2.2.2 # Flask might need to be 3.0.2
 keras==2.15.0
 mtcnn==0.1.1
