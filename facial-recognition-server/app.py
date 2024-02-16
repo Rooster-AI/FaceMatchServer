@@ -1,15 +1,18 @@
+# pylint: disable=C0413
 """
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
 """
-
 import os
+import re
 import time
 import base64
 from datetime import datetime
 import json
 import csv
+import sys
 from concurrent.futures import ThreadPoolExecutor, wait
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 import numpy as np
 import cv2
@@ -17,8 +20,12 @@ import resend
 from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
+sys.path.append('../')
+from supabase_dao import get_all_banned_person_images, get_banned_person, \
+    get_banned_person_images, get_store_employees, get_store_by_id
 
 os.chdir(os.path.dirname(__file__))
+load_dotenv()
 
 MODEL = "ArcFace"
 BACKEND = "mtcnn"
@@ -28,15 +35,12 @@ MODEL_DIST = f"{MODEL}_{DIST}"
 DB = "data/database"
 BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = "./archive/activity.csv"
-RESEND_API_KEY = "re_4R1GUEGA_MU5BxRc2YKFFYsnvB55eojoM"
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 TESTING_MODE = False
 
 app = Flask(__name__)
 
-# Set the environment variable
-os.environ["RESEND_API_KEY"] = RESEND_API_KEY
-
-resend.api_key = os.environ["RESEND_API_KEY"]
+resend.api_key = RESEND_API_KEY
 
 with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
@@ -50,7 +54,6 @@ def upload_images():
         and verifies them against a database.
         It returns a response indicating the outcome of the processing.
     """
-    print("Uploading Images", flush=True)
     if "images" not in request.json:
         return jsonify({"message": "No images found in the request"}), 400
     images = request.json["images"]
@@ -83,7 +86,6 @@ def upload_images():
 
         s = time.time()
         face_groups = make_face_groups(group_matches, all_faces)
-
         verify_faces(face_groups, first_frame)
         print(f"Verified Faces in {time.time()-s}s")
 
@@ -194,15 +196,16 @@ def verify_faces(face_groups, first_frame):
             finder(face, face_dict)
 
     match = find_lowest_average(face_dict)
-    match_image = None
-    for person in contacts:
-        if person["Name"] == match:
-            match_image = person["Image"]
+    print(f"Match: {match}")
+    match_person = None
+    if match is not None:
+        match_person = get_banned_person(match)
+    match_image = get_banned_person_images(match)[0].image
 
     if TESTING_MODE:
         write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
     else:
-        send_email(match_image, first_frame)
+        send_email(match_image, first_frame, match_person)
     face_groups.clear()
 
 def make_test_directory():
@@ -232,34 +235,136 @@ def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
             writer = csv.writer(file)
             writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
 
-def send_email(match_image, first_frame):
+def send_email(match_image, first_frame, match_person):
     """Sends an email alert with attached images for shoplifter identification."""
-    file_path = os.path.join(os.path.dirname(__file__), f"data/database/{match_image[0]}")
-    with open(file_path, "rb") as file:
-        data = file.read()
-    html_content = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Suspected Shoplifter Alert</title>
-            </head>
-            <body>
-                <p style="text-align: center; font-weight: bold;">
-                    Please review the two attached images to verify if this is a correct match.
-                </p>
-            </body>
-            </html>
-        """
+
+    # TO DO - Add the email address of the store owner to the "to" list
+    # TO DO - Add the information of the match to the email content
+    # print(match_image)
+    store_id = match_person.reporting_store_id
+    employees = get_store_employees(store_id)
+
+
+    emails = []
+    for employee in employees:
+        emails.append(employee.email)
+
+    with open("roosterLogo.png", "rb") as image_file:
+        logo = base64.b64encode(image_file.read())
+
+    info = ""
+    if match_person.full_name:
+        info += f"<p>Name: {match_person.full_name}</p>"
+
+    if match_person.drivers_license:
+        info += f"<p>Drivers License: {match_person.drivers_license}</p>"
+
+    if match_person.est_value_stolen:
+        info += f"<p>Estimated Value Stolen: {match_person.est_value_stolen}</p>"
+
+    if match_person.description:
+        info += f"<p>Description: {match_person.description}</p>"
+
+    if match_person.report_date:
+        info += f"<p>Report Date: {match_person.report_date}</p>"
+
+    if match_person.reporting_store_id:
+        reporting_store = get_store_by_id(match_person.reporting_store_id)
+        info += f"<p>Reporting Store: {reporting_store.name}</p>"
+
+    html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rooster Identity Confirmation</title>
+        <style>
+        body {{
+            font-family: Arial, sans-serif;
+            background-color: #c22026; /* Adjusted to match logo color */
+            color: #000000;
+            padding: 20px;
+        }}
+        .email-container {{
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+        }}
+        .header {{
+            background-color: #fff; /* Adjusted to match logo color */
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }}
+        .footer {{
+            background-color: #c22026; /* Adjusted to match logo color */
+            padding: 10px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            color: #ffffff;
+        }}
+        .button {{
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            background-color: #c22026;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 4px;
+        }}
+        a {{
+            color: #ffffff !important;
+            text-decoration: none;
+        }}
+
+
+        </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    <img src="data:image/jpeg;base64,{logo.decode('utf-8')}" alt="Rooster Logo" class="image" width="100">
+                </div>
+
+                <h1>Confirm the Match</h1>
+                <p>Please review the images below to confirm the identity of the individual:</p>
+                <div>
+                    <img src="data:image/jpeg;base64,{first_frame}" alt="Person in Store" class="image" style="margin-center: 10px;">
+                    <img src="data:image/jpeg;base64,{match_image}" alt="Match" class="image" style="margin-center: 10px;">
+                </div>
+                <p>Is this a match?</p>
+                <p>{info}</p>
+                <div class="footer">
+                    <p>Contact us for support at support@userooster.com</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    """
+                # <a href="#" class="button">Yes, it's a match</a>
+                # <a href="#" class="button">No, it's not a match</a>
     params = {
         "from": "Rooster <no-reply@alert.userooster.com>",
-        "to": ["spencerkunkel@userooster.com"],
+        "to": emails[0],
         "subject": "Alert: Shoplifter Identified in Your Store",
         "html": html_content,
-        "attachments": [
-            {"filename": "person_in_store.jpg", "content": first_frame},
-            {"filename": "match.jpg", "content": list(data)},
-        ],
+        # we may want to add the images as attachments,
+        # but they were not working
+        # "attachments": [
+        #     {
+        #         "name": "Person in Store.jpg",
+        #         "content": first_frame.decode("utf-8"),
+        #     },
+        #     {
+        #         "name": "Match.jpg",
+        #         "content": match_image.decode("utf-8"),
+        #     },
+        # ],
     }
     resend.Emails.send(params)
 
@@ -294,7 +399,7 @@ def find_face(result, face_dict):
     for res in result:
         # For each person identified:
         images_close = [
-            get_name_from_file(image)
+            get_id_from_file(image)
             for image in res["identity"].to_list()
         ]
         distances = res[MODEL_DIST].to_list()
@@ -320,15 +425,52 @@ def save_face(face_data, path_name):
     image.save(path_name)
 
 
-def get_name_from_file(image_path):
+def get_id_from_file(image_path):
     """Retrieves the name associated with an image file."""
-    try:
-        for contact in contacts:
-            if os.path.split(image_path)[-1] in contact["Image"]:
-                return contact["Name"]
-    except (TypeError, KeyError) as e:
-        print(f"An error occurred: {e}")
+    # use this when deepface is updated to use new id file names
+    # print(image_path)
+    # pattern = r"(\d+_\d+).jpg$"
+    # match = re.search(pattern, image_path)
+    # print(match)
+    # if match:
+    #     return match.group(1)
+    # return None
+
+    # in the meantime, use this
+    pattern = r"/([^/]+)\.jpg$"
+    match = re.search(pattern, image_path)
+    if match:
+        return get_id_from_name(match.group(1))
     return None
+
+def get_id_from_name(name):
+    """Retrieves the name associated with an image file."""
+    people_by_name = {
+        "adamchandler": 320,
+        "adamrounsville": 321,
+        "alexanderdensley": 322,
+        "antonalley": 323,
+        "aspenfisher": 324,
+        "benjaminfisher": 325,
+        "cairomurphy": 326,
+        "cannonfarr": 327,
+        "chadsauder": 328,
+        "dallinbartholomew": 329,
+        "dallinburningham": 330,
+        "devinjernigan": 331,
+        "gavinshelley": 332,
+        "jasonlowe": 333,
+        "josemontoya": 334,
+        "oakleymiller": 335,
+        "sambenion": 336,
+        "tannerking": 337,
+        "timothybrown": 338,
+        "xanderhunt": 339,
+        "loganorr": 350,
+        "spencerkunkel": 351,
+    }
+    return people_by_name[name]
+
 
 
 def find_lowest_average(face_dict):
@@ -353,6 +495,36 @@ def find_lowest_average(face_dict):
 
     return lowest_key
 
+def update_banned_list():
+    """Updates the banned list with the latest data."""
+    new_banned_list = get_all_banned_person_images()
+    print(new_banned_list)
+    for person_image in new_banned_list:
+        path = f"data/database2/{person_image.banned_person_id}_{person_image.id}.jpg"
+        decoded = base64.b64decode(person_image.image)
+        with open(path, "wb") as file:
+            file.write(decoded)
+
+
+def extract_id_from_filepath(filepath):
+    """
+    Extracts the ID from the given filepath with the structure "data/database2/(id)_(number).jpg".
+    
+    Parameters:
+    - filepath: A string representing the file path.
+    
+    Returns:
+    - The extracted ID as a string.
+    """
+    # Extract the basename of the file (e.g., "(id)_(number).jpg")
+    basename = os.path.basename(filepath)
+
+    # Split the basename by underscore ('_') and take the first part, which contains the ID
+    id_part = basename.split('_')[0]
+
+    return id_part
+
+
 
 if __name__ == "__main__":
-    app.run(debug=True, threaded=True, host="192.168.0.16", port=5000)
+    app.run(debug=False, threaded=True, host="localhost", port=5000)
