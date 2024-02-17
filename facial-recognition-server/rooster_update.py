@@ -1,4 +1,4 @@
-# pylint: disable=W0511, C0413
+# pylint: disable=W0511, C0413, C0411
 """
     Updates the Server's database nightly
 """
