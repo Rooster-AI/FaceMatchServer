@@ -58,4 +58,3 @@ Before running this server, ensure you have the following dependencies installed
 
 ### API TODO
 - /upload-images add store id to get the raspberry pi it was coming from
-- 
