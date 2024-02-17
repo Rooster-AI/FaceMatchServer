@@ -1,3 +1,4 @@
+# pylint: disable=W0511, C0413
 """
     Updates the Server's database nightly
 """
@@ -39,7 +40,6 @@ def update_encodings(model="ArcFace", backend="mtcnn"):
         # TODO: Most likely means it can't find a face in a face that was uploaded
         # TODO: Could change rooster-deepface to compile rest wihtout the face that threw the error
         logger.critical("SERVER ERROR: NO ABLE TO COMPILE DATABASE", exc_info=e)
-    return
 
 
 if __name__ == "__main__":
