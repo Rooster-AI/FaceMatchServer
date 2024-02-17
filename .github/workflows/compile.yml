@@ -22,11 +22,6 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Cleanup
-        run: |
-          pyinstaller --clean
-          # Clean up PyInstaller build artifacts to ensure a clean build environment
-
       - name: Build executable
         run: |
           pyinstaller --onefile facial-recognition-server/server.py
