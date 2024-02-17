@@ -24,7 +24,7 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller --onefile server.py
+          pyinstaller --onefile facial-recognition-server/server.py
 
       - name: Archive executable
         uses: actions/upload-artifact@v2
