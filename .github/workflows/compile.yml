@@ -1,13 +1,12 @@
-name: Compile Flask Server
+name: Build Python App
 
 on:
   push:
     branches:
       - main
-      - staging
 
 jobs:
-  compile:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,13 +20,20 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install cx-Freeze
 
-      - name: Compile Python code with Compylon
+      - name: Build executable
         run: |
-          compylon compile -o build app.py
+          cxfreeze facial-recognition-server/server.py --target-dir dist
 
-      - name: Archive compiled code
+      - name: Verify output file
+        run: |
+          ls -l dist/
+          # Print the contents of the dist directory to verify if the output file exists
+
+      - name: Archive executable
+        if: success()
         uses: actions/upload-artifact@v2
         with:
-          name: compiled-code
-          path: build
+          name: app-executable
+          path: dist/

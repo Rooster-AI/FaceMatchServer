@@ -3,6 +3,7 @@
 """
 
 import datetime
+import os
 from flask import Flask, request, jsonify, send_file
 import app as Funcs
 import os
@@ -20,11 +21,13 @@ app = Flask(__name__)
 
 @app.route("/upload-images", methods=["POST"])
 def upload_images_endpoint():
+    """
+    Endpoint for client to send images to server
+    """
     success, result = Funcs.upload_images(request.json)
     if success:
         return jsonify(result), 200
-    else:
-        return jsonify(result), 400
+    return jsonify(result), 400
 
 
 @app.route("/add-banned-person", methods=["POST"])
@@ -49,6 +52,9 @@ def add_banned_person_endpoint():
 
 @app.route("/latest_database", methods=["GET"])
 def get_latest_database_pkl():
+    """
+    Endpoint for client to get new pkl file
+    """
     filepath = Funcs.get_latest_database(request.args)
     if filepath:
         return send_file(filepath, as_attachment=True)
