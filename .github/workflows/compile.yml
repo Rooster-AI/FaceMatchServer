@@ -1,13 +1,12 @@
-name: Compile Flask Server
+name: Build Python App
 
 on:
   push:
     branches:
       - main
-      - staging
 
 jobs:
-  compile:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,13 +20,14 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install pyinstaller
 
-      - name: Compile Python code with Compylon
+      - name: Build executable
         run: |
-          compylon compile -o build app.py
+          pyinstaller --onefile server.py
 
-      - name: Archive compiled code
+      - name: Archive executable
         uses: actions/upload-artifact@v2
         with:
-          name: compiled-code
-          path: build
+          name: app-executable
+          path: build/
