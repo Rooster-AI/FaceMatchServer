@@ -1,4 +1,4 @@
-# pylint: disable=C0413
+# pylint: disable=C0413, C0301
 """
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
@@ -19,6 +19,9 @@ import resend
 from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
+
+os.chdir(os.path.dirname(__file__))
+
 
 sys.path.append("../")
 from supabase_dao import (
@@ -530,13 +533,13 @@ def get_latest_database(args):
     """
     model = args.get("model")
     backend = args.get("backend")
+    print("hio")
     if not model or not backend:
         model = "ArcFace"
         backend = "mtcnn"  # By default return the yolov8 version
-    filename = f"representations_{model.lower().replace('-','_')}\
-        _{backend.lower().replace('-','_')}.pkl"
+    filename = f"representations_{model.lower().replace('-','_')}_{backend.lower().replace('-','_')}.pkl"
+
     filepath = os.path.join(os.getcwd(), "data", "master_database", filename)
     if os.path.exists(filepath):
         return filepath
-
     return False

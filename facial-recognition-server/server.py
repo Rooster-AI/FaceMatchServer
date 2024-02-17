@@ -6,10 +6,14 @@ import datetime
 from flask import Flask, request, jsonify, send_file
 import app as Funcs
 import os
+import sys
 from models.banned_person import BannedPerson
-from supabase_dao import add_banned_person
 
 os.chdir(os.path.dirname(__file__))
+
+sys.path.append("../")
+from supabase_dao import add_banned_person
+
 
 app = Flask(__name__)
 

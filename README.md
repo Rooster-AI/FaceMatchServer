@@ -43,7 +43,6 @@ Before running this server, ensure you have the following dependencies installed
    "drivers_license": "",
    "est_value_stolen": "", 
    "reporting_store_id": "",
-   "report_date": "", 
    "is_private": "", 
    "description": "",
    "image_encoding":""
