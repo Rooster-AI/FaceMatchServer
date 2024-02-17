@@ -20,11 +20,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install cx-Freeze
 
       - name: Build executable
         run: |
-          pyinstaller --onefile facial-recognition-server/server.py
+          cxfreeze facial-recognition-server/server.py --target-dir dist
 
       - name: Verify output file
         run: |
@@ -37,8 +37,3 @@ jobs:
         with:
           name: app-executable
           path: dist/
-
-      - name: Display PyInstaller logs
-        run: |
-          cat build/*.log
-          # Display PyInstaller build logs for debugging purposes
