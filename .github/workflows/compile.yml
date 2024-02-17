@@ -22,12 +22,28 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+      - name: Cleanup
+        run: |
+          pyinstaller --clean
+          # Clean up PyInstaller build artifacts to ensure a clean build environment
+
       - name: Build executable
         run: |
           pyinstaller --onefile facial-recognition-server/server.py
 
+      - name: Verify output file
+        run: |
+          ls -l dist/
+          # Print the contents of the dist directory to verify if the output file exists
+
       - name: Archive executable
+        if: success()
         uses: actions/upload-artifact@v2
         with:
           name: app-executable
-          path: build/
+          path: dist/
+
+      - name: Display PyInstaller logs
+        run: |
+          cat build/*.log
+          # Display PyInstaller build logs for debugging purposes
