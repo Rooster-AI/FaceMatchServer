@@ -6,14 +6,14 @@ import datetime
 import os
 from flask import Flask, request, jsonify, send_file
 import app as Funcs
-import os
 import sys
 from models.banned_person import BannedPerson
+from models.logging import Logging
 
 os.chdir(os.path.dirname(__file__))
 
 sys.path.append("../")
-from supabase_dao import add_banned_person
+from supabase_dao import add_banned_person, database_log
 
 
 app = Flask(__name__)
@@ -37,7 +37,7 @@ def add_banned_person_endpoint():
     """
     data = request.json
     person = BannedPerson(
-        full_name=request.json.get("full_name"),
+        full_name=data.get("full_name"),
         drivers_license=data.get("drivers_license"),
         est_value_stolen=data.get("est_value_stolen"),
         reporting_store_id=data.get("reporting_store_id"),
@@ -60,6 +60,24 @@ def get_latest_database_pkl():
         return send_file(filepath, as_attachment=True)
 
     return jsonify({"message": "Server Failed, check logs"}), 400
+
+
+@app.route("/logging", methods=["POST"])
+def log():
+    """
+    Adds a row in the logging database
+    """
+    try:
+        data = request.json
+        this_log = Logging(
+            device_id=data.get("device_id"),
+            severity=data.get("severity"),
+            message=data.get("message"),
+        )
+        database_log(this_log)
+        return jsonify({"message": "success"}), 200
+    except ValueError:
+        return jsonify({"message", "Failed, possibly missing values"}), 400
 
 
 if __name__ == "__main__":
