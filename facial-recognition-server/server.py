@@ -1,12 +1,14 @@
+# pylint: disable=C0413
+
 """
     This is the root for all endpoints, and is the file to be ran on the server
 """
 
 import datetime
 import os
+import sys
 from flask import Flask, request, jsonify, send_file
 import app as Funcs
-import sys
 from models.banned_person import BannedPerson
 from models.logging import Logging
 
