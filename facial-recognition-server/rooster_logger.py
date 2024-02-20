@@ -1,3 +1,4 @@
+# pylint: disable=E0401, E0611
 """
     Setup a logger for the server
     usage:
