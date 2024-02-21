@@ -1,9 +1,10 @@
-# pylint: disable=C0413, C0301
+# pylint: disable=C0413, C0301, E0401, C0103, E1101
 """
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
 """
 import os
+from queue import Queue
 import re
 import time
 import base64
@@ -43,7 +44,7 @@ DB = "data/database"
 BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = "./archive/activity.csv"
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-TESTING_MODE = False
+TESTING_MODE = True
 
 
 resend.api_key = RESEND_API_KEY
@@ -51,7 +52,8 @@ resend.api_key = RESEND_API_KEY
 with open("data/startupList.json", encoding="utf-8") as f:
     contacts = json.load(f)
 
-
+# using single thread with the blocking setup the dummy client takes 20.4s to run
+# with the nonblocking setup it takes 1.4s to run
 def upload_images(data):
     """
     Handles the POST request to upload and process images for facial recognition.
@@ -65,13 +67,28 @@ def upload_images(data):
     first_frame = images[0]
     decoded_images = decode_images(images)
 
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    executor = ThreadPoolExecutor(max_workers=1)
+    executor.submit(analyze_images, decoded_images, first_frame)
+
+    return True, {"message": f"{len(decoded_images)} files uploaded and are being processed"}
+
+
+def analyze_images(decoded_images, first_frame):
+    """
+    Analyze images in a separate function so that the server
+    does not block while processing images.
+    """
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        all_faces_queue = Queue()
         all_faces = []
         s = time.time()
         to_finish_extract = [
-            executor.submit(extract, frame, all_faces) for frame in decoded_images
+            executor.submit(extract, frame, all_faces_queue) for frame in decoded_images
         ]
         wait(to_finish_extract)
+        while not all_faces_queue.empty():
+            all_faces.append(all_faces_queue.get())
+
         if TESTING_MODE:
             print(f"Extracted {len(all_faces)} Faces in {time.time()-s}s")
 
@@ -94,8 +111,6 @@ def upload_images(data):
         verify_faces(face_groups, first_frame)
         print(f"Verified Faces in {time.time()-s}s")
 
-    return True, {"message": f"{len(decoded_images)} files uploaded and processed"}
-
 
 def decode_images(images):
     """Decodes base64-encoded images and converts them to numpy arrays."""
@@ -116,7 +131,6 @@ def make_face_groups(group_matches, all_faces):
     Returns a dictionary mapping each group key to the list of faces in that group.
     """
     face_groups = {}
-
     for k in group_matches.keys():
         group_matches[k] = set(group_matches[k])
 
@@ -178,7 +192,7 @@ def extract(frame, all_faces):
                 # Add embedding so only has to be calculated once
                 emb = get_embedding(face["face"])
                 face["embedding"] = emb
-                all_faces.append(face)
+                all_faces.put(face)
     except ValueError as e:
         print(e)
         return
@@ -203,7 +217,6 @@ def verify_faces(face_groups, first_frame):
             finder(face, face_dict)
 
     match = find_lowest_average(face_dict)
-    print(f"Match: {match}")
     match_person = None
     if match is not None:
         match_person = get_banned_person(match)
@@ -228,7 +241,6 @@ def make_test_directory():
 
 def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
     """Writes server results to test directory"""
-    print(match)
     epoch_info = {
         "match": {
             "name": match,
@@ -250,9 +262,6 @@ def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
 def send_email(match_image, first_frame, match_person):
     """Sends an email alert with attached images for shoplifter identification."""
 
-    # TO DO - Add the email address of the store owner to the "to" list
-    # TO DO - Add the information of the match to the email content
-    # print(match_image)
     store_id = match_person.reporting_store_id
     employees = get_store_employees(store_id)
 
