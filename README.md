@@ -30,13 +30,12 @@ Before running this server, ensure you have the following dependencies installed
 
 1. Build the docker image
    - from the facial-recognition-server dir run
-     '''shell
-     docker build -t rooster-server .
+   ```shell
+   docker build -t rooster-server .
 
 2. Run th docker image
-     '''shell
+     ```shell
       run -p 5000:5000 -it rooster-server
-
 
 ## API
 
