@@ -33,7 +33,7 @@ Before running this server, ensure you have the following dependencies installed
    ```shell
    docker build -t rooster-server .
 
-2. Run th docker image
+2. Run the docker image
      ```shell
       docker run -p 5000:5000 -it rooster-server
 
