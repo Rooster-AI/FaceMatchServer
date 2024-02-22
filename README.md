@@ -29,13 +29,13 @@ Before running this server, ensure you have the following dependencies installed
 ## Using Docker
 
 1. Build the docker image
-   - from the facial-recognition-server dir run
+   - from the Rooster/FaceMatchServer dir run
    ```shell
    docker build -t rooster-server .
 
 2. Run th docker image
      ```shell
-      run -p 5000:5000 -it rooster-server
+      docker run -p 5000:5000 -it rooster-server
 
 ## API
 
