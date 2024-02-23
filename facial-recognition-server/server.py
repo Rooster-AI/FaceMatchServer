@@ -95,9 +95,9 @@ def on_stop_server(exception=None):
     sys.exit(1)  # End the process with a non-zero to end in an error (for Docker)
 
 
-if __name__ == "__main__":
-    try:
-        database_log(Logging(DEVICE_ID, "INFO", "Started Rooster-Server"))
-        app.run(debug=True, threaded=True, host="0.0.0.0", port=5000)
-    except (Exception, KeyboardInterrupt) as e:
-        on_stop_server(e)
+# if __name__ == "__main__":
+#     try:
+#         database_log(Logging(DEVICE_ID, "INFO", "Started Rooster-Server"))
+#         app.run(debug=True, threaded=True, host="0.0.0.0", port=5000)
+#     except (Exception, KeyboardInterrupt) as e:
+#         on_stop_server(e)
