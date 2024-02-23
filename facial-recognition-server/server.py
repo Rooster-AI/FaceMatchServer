@@ -1,4 +1,4 @@
-# pylint: disable=C0413
+# pylint: disable=C0413,W0718
 
 """
     This is the root for all endpoints, and is the file to be ran on the server
@@ -19,6 +19,8 @@ from supabase_dao import add_banned_person, database_log
 
 
 app = Flask(__name__)
+
+DEVICE_ID = 2  # For logging to the db
 
 
 @app.route("/upload-images", methods=["POST"])
@@ -82,5 +84,20 @@ def log():
         return jsonify({"message", "Failed, possibly missing values"}), 400
 
 
+def on_stop_server(exception=None):
+    """
+    Runs when the flask server crashes, or ctrl c is pressed
+    """
+    Funcs.send_warning_email("Rooster-Server Down, check database for error")
+    database_log(
+        Logging(DEVICE_ID, "ERROR", f"Rooster-Server Down on error: {exception}")
+    )
+    sys.exit(1)  # End the process with a non-zero to end in an error (for Docker)
+
+
 if __name__ == "__main__":
-    app.run(debug=False, threaded=True, host="0.0.0.0", port=5000)
+    try:
+        database_log(Logging(DEVICE_ID, "INFO", "Started Rooster-Server"))
+        app.run(debug=True, threaded=True, host="0.0.0.0", port=5000)
+    except (Exception, KeyboardInterrupt) as e:
+        on_stop_server(e)
