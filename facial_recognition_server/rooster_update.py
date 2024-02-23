@@ -52,8 +52,6 @@ if __name__ == "__main__":
     logger.info("Successfully updated images in master_database")
     update_encodings("ArcFace", "mtcnn")
     logger.info("Successfully updated encodings for arcface and mtcnn")
-    update_encodings("ArcFace", "yolov8")  # For the client to grab updated pkl
-    logger.info("Successfully updated encodings for arcface and yolov8")
 
     # Notify the database that it completed
     database_log(

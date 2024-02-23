@@ -8,14 +8,12 @@ import datetime
 import os
 import sys
 from flask import Flask, request, jsonify, send_file
+import facial_recognition_server.app as Funcs
 from models.banned_person import BannedPerson
 from models.logging import Logging
+from supabase_dao import add_banned_person, database_log
 
 os.chdir(os.path.dirname(__file__))
-import app as Funcs
-
-sys.path.append("../")
-from supabase_dao import add_banned_person, database_log
 
 
 app = Flask(__name__)
