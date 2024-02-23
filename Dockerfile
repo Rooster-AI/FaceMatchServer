@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 5000:5000
 
-CMD ["sh", "-c", "python facial_recognition_server/rooster_update.py && gunicorn --workers 2 --bind localhost:5000 server:app --timeout 90"]
+CMD ["sh", "-c", "python facial_recognition_server/rooster_update.py && gunicorn --workers 2 --bind 0.0.0.0:5000 server:app --timeout 90"]
