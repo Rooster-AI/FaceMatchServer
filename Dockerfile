@@ -13,4 +13,4 @@ COPY . .
 
 EXPOSE 5000:5000
 
-CMD ["python", "facial-recognition-server/server.py"]
+CMD ["sh", "-c", "python facial-recognition-server/rooster_update.py && python facial-recognition-server/server.py"]
