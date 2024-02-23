@@ -13,6 +13,7 @@ import json
 import csv
 import sys
 from concurrent.futures import ThreadPoolExecutor, wait
+import multiprocessing
 from dotenv import load_dotenv
 import numpy as np
 import cv2
@@ -45,6 +46,7 @@ BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = "./archive/activity.csv"
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 TESTING_MODE = True
+MAX_NUM_THREADS = 4
 
 
 resend.api_key = RESEND_API_KEY
@@ -67,8 +69,8 @@ def upload_images(data):
     first_frame = images[0]
     decoded_images = decode_images(images)
 
-    executor = ThreadPoolExecutor(max_workers=1)
-    executor.submit(analyze_images, decoded_images, first_frame)
+    executor = ThreadPoolExecutor(max_workers=MAX_NUM_THREADS)
+    executor.apply(analyze_images, decoded_images, first_frame)
 
     return True, {"message": f"{len(decoded_images)} files uploaded and are being processed"}
 
@@ -78,14 +80,16 @@ def analyze_images(decoded_images, first_frame):
     Analyze images in a separate function so that the server
     does not block while processing images.
     """
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with multiprocessing.Pool() as pool:
         all_faces_queue = Queue()
         all_faces = []
         s = time.time()
-        to_finish_extract = [
-            executor.submit(extract, frame, all_faces_queue) for frame in decoded_images
-        ]
-        wait(to_finish_extract)
+        for frame in decoded_images:
+            extract(frame, all_faces_queue)
+        # to_finish_extract = [
+        #     pool.apply(extract, frame, all_faces_queue) for frame in decoded_images
+        # ]
+        # wait(to_finish_extract)
         while not all_faces_queue.empty():
             all_faces.append(all_faces_queue.get())
 
@@ -97,9 +101,10 @@ def analyze_images(decoded_images, first_frame):
         finish_comps = []
         for i, face in enumerate(all_faces):
             finish_comps.append(
-                executor.submit(comp_face, face, i, all_faces[i + 1 :], group_matches)
+                comp_face(face, i, all_faces[i + 1 :], group_matches)
+                # pool.submit(comp_face, face, i, all_faces[i + 1 :], group_matches)
             )
-        wait(finish_comps)
+        # wait(finish_comps)
         if TESTING_MODE:
             print(f"Grouped Faces in {time.time() - s}s")
             print(
