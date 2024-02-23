@@ -16,6 +16,7 @@ Before running this server, ensure you have the following dependencies installed
 1. Clone this repository to your local machine:
 
    ```shell
+   git config credential.helper store
    git clone https://github.com/Rooster-AI/FaceMatchServer.git
 
 ## Running Unit Tests
@@ -34,7 +35,7 @@ Before running this server, ensure you have the following dependencies installed
       docker run -d -p 5000:5000 --restart always rooster-server
       ```
 
-2. (opt. 2)Run a script that will restart docker image nightly at 3am (set timezone - `sudo timedatectl set-timezone America/Denver`)
+2. (opt. 2)Run a script that will restart docker image and run git pull nightly at 3am (set timezone - `sudo timedatectl set-timezone America/Denver`)
    a. make restart_docker.sh executable
       ```shell
       chmod +x restart_docker.sh
