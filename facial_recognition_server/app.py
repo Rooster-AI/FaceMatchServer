@@ -370,25 +370,26 @@ def send_email(match_image, first_frame, match_person):
     """
     # <a href="#" class="button">Yes, it's a match</a>
     # <a href="#" class="button">No, it's not a match</a>
-    params = {
-        "from": "Rooster <no-reply@alert.userooster.com>",
-        "to": emails[0],
-        "subject": "Alert: Shoplifter Identified in Your Store",
-        "html": html_content,
-        # we may want to add the images as attachments,
-        # but they were not working
-        # "attachments": [
-        #     {
-        #         "name": "Person in Store.jpg",
-        #         "content": first_frame.decode("utf-8"),
-        #     },
-        #     {
-        #         "name": "Match.jpg",
-        #         "content": match_image.decode("utf-8"),
-        #     },
-        # ],
-    }
-    resend.Emails.send(params)
+    for email in emails:
+        params = {
+            "from": "Rooster <no-reply@alert.userooster.com>",
+            "to": email,
+            "subject": "Alert: Shoplifter Identified in Your Store",
+            "html": html_content,
+            # we may want to add the images as attachments,
+            # but they were not working
+            # "attachments": [
+            #     {
+            #         "name": "Person in Store.jpg",
+            #         "content": first_frame.decode("utf-8"),
+            #     },
+            #     {
+            #         "name": "Match.jpg",
+            #         "content": match_image.decode("utf-8"),
+            #     },
+            # ],
+        }
+        resend.Emails.send(params)
 
 
 def send_warning_email(message: str):
