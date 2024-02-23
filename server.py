@@ -9,6 +9,7 @@ import os
 import sys
 from flask import Flask, request, jsonify, send_file
 import facial_recognition_server.app as Funcs
+from facial_recognition_server.app import DEVICE_ID
 from models.banned_person import BannedPerson
 from models.logging import Logging
 from supabase_dao import add_banned_person, database_log
@@ -17,8 +18,6 @@ os.chdir(os.path.dirname(__file__))
 
 
 app = Flask(__name__)
-
-DEVICE_ID = 2  # For logging to the db
 
 
 @app.route("/upload-images", methods=["POST"])

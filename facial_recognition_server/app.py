@@ -24,16 +24,19 @@ os.chdir(os.path.dirname(__file__))
 
 
 sys.path.append("../")
+from models.logging import Logging
 from supabase_dao import (
     get_banned_person,
     get_banned_person_images,
     get_store_employees,
     get_store_by_id,
+    database_log,
 )
 
 
 load_dotenv()
 
+DEVICE_ID = 2  # For logging to the db
 MODEL = "ArcFace"
 BACKEND = "mtcnn"
 DIST = "cosine"
@@ -213,6 +216,14 @@ def verify_faces(face_groups, first_frame):
             write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
         else:
             send_email(match_image, first_frame, match_person)
+            database_log(
+                Logging(
+                    DEVICE_ID,
+                    "INFO",
+                    f"Found Shoplifter! Name:{match_person.full_name}, ID:{match_person.id} IN STORE: #TODO",
+                )
+            )
+
     face_groups.clear()
 
 
