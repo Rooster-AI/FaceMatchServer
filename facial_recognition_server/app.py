@@ -207,12 +207,12 @@ def verify_faces(face_groups, first_frame):
     match_person = None
     if match is not None:
         match_person = get_banned_person(match)
-    match_image = get_banned_person_images(match)[0].image
+        match_image = get_banned_person_images(match)[0].image
 
-    if TESTING_MODE:
-        write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
-    else:
-        send_email(match_image, first_frame, match_person)
+        if TESTING_MODE:
+            write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
+        else:
+            send_email(match_image, first_frame, match_person)
     face_groups.clear()
 
 
