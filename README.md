@@ -18,15 +18,42 @@ Before running this server, ensure you have the following dependencies installed
    ```shell
    git clone https://github.com/Rooster-AI/FaceMatchServer.git
 
-2. Run setup.bash
-3. Set Regular git pull and database download:
-   a. crontab -e
-   b. add this line to the file: 0 3 * * * /path/to/your/bash/update.sh
 ## Running Unit Tests
 
 (python-env) -m unittest discover -s test
 
+## Using Docker
 
+1. Build the docker image
+   - from the Rooster/FaceMatchServer dir run
+   ```shell
+   docker build -t rooster-server .
+
+2. (opt. 1)Run the docker image
+     ```shell
+      docker run -d -p 5000:5000 --restart always rooster-server
+      ```
+
+2. (opt. 2)Run a script that will restart docker image nightly at 3am (set timezone - `sudo timedatectl set-timezone America/Denver`)
+   a. make restart_docker.sh executable
+      ```shell
+      chmod +x restart_docker.sh
+      ```
+
+   b. add to crontab
+      ```shell
+      crontab -e
+      ```
+
+   c. add a new line to that file and save file
+      ```shell
+      0 3 * * * /path/to/restart_docker.sh
+      ```
+
+   d. verify scheduled task
+      ```shell
+      crontab -l
+      ```
 
 ## API
 

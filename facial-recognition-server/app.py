@@ -389,6 +389,27 @@ def send_email(match_image, first_frame, match_person):
     resend.Emails.send(params)
 
 
+def send_warning_email(message: str):
+    """Sends a warning email to founders of rooster"""
+
+    founders = get_store_employees(472)  # 472 is Rooster
+
+    emails = []
+    for employee in founders:
+        emails.append(employee.email)
+
+    html_content = f"<html><body>{message}</body></html>"
+
+    for email in emails:
+        params = {
+            "from": "Rooster <no-reply@alert.userooster.com>",
+            "to": email,
+            "subject": "!!Rooster FOUNDERS: There is a problem!!",
+            "html": html_content,
+        }
+        resend.Emails.send(params)
+
+
 def finder(facial_data, face_dict):
     """
     Searches for matches of the given facial data in the database.

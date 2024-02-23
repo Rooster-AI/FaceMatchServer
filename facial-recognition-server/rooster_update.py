@@ -8,11 +8,15 @@ import os
 import sys
 from deepface import rooster_deepface
 
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from supabase_dao import get_all_banned_person_images
+from supabase_dao import database_log, get_all_banned_person_images
 
 os.chdir(os.path.dirname(__file__))
 from rooster_logger import logger
+from models.logging import Logging
+
+DEVICE_ID = 2  # For logging to the db
 
 
 def update_banned_list():
@@ -33,7 +37,7 @@ def update_encodings(model="ArcFace", backend="mtcnn"):
             db_path="data/master_database",
             model_name=model,
             detector_backend=backend,
-            force_recreate=True
+            force_recreate=True,
         )
     except ValueError as e:
         # TODO: when this happens, send an email or something becuase this has to be fixed
@@ -48,5 +52,10 @@ if __name__ == "__main__":
     logger.info("Successfully updated images in master_database")
     update_encodings("ArcFace", "mtcnn")
     logger.info("Successfully updated encodings for arcface and mtcnn")
-    update_encodings("ArcFace", "yolov8") # For the client to grab updated pkl
+    update_encodings("ArcFace", "yolov8")  # For the client to grab updated pkl
     logger.info("Successfully updated encodings for arcface and yolov8")
+
+    # Notify the database that it completed
+    database_log(
+        Logging(DEVICE_ID, "INFO", "Completed .pkl update to face database on server")
+    )
