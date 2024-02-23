@@ -1,4 +1,4 @@
-# pylint: disable=C0413,W0718
+# pylint: disable=C0413,W0718, E0401, C4011
 
 """
     This is the root for all endpoints, and is the file to be ran on the server
@@ -8,11 +8,11 @@ import datetime
 import os
 import sys
 from flask import Flask, request, jsonify, send_file
-import app as Funcs
 from models.banned_person import BannedPerson
 from models.logging import Logging
 
 os.chdir(os.path.dirname(__file__))
+import app as Funcs
 
 sys.path.append("../")
 from supabase_dao import add_banned_person, database_log
