@@ -8,8 +8,10 @@ import os
 import sys
 from deepface import rooster_deepface
 
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MAIN_DIR = os.path.dirname(__file__)
+# Parent imports
+PAR_DIR = os.path.dirname(MAIN_DIR)
+sys.path.append(PAR_DIR)
 from supabase_dao import database_log, get_all_banned_person_images
 
 os.chdir(os.path.dirname(__file__))

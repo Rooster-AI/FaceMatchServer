@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./facial_recognition_server"
+    ],
+    "debugpy.debugJustMyCode": false
+}

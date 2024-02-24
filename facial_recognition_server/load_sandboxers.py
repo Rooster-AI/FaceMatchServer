@@ -1,12 +1,18 @@
-# pylint: disable=C0413,R0915
+# pylint: disable=C0413,R0915,E1101
 """
 Code to load example sandbox people into the database
 """
+import os
 from ast import Store
 import base64
 import sys
 import cv2
-sys.path.append("../")
+
+
+MAIN_DIR = os.path.dirname(__file__)
+# Parent imports
+PAR_DIR = os.path.dirname(MAIN_DIR)
+sys.path.append(PAR_DIR)
 from supabase_dao import add_banned_person_image, add_store, add_banned_person
 from models.banned_person import BannedPerson
 from models.banned_person_image import BannedPersonImage
@@ -112,16 +118,22 @@ def add_sandboxers():
     # LoganOrr
     path = "./data/database/loganorr.jpg"
     img = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', img)
+    _, buffer = cv2.imencode(".jpg", img)
     image1 = base64.b64encode(buffer).decode()
 
-    person = BannedPerson(full_name="Logan Orr", reporting_store_id=store_id,
-                            report_date='now()', is_private="TRUE",
-                            drivers_license=None, est_value_stolen=None, description="goofy")
+    person = BannedPerson(
+        full_name="Logan Orr",
+        reporting_store_id=store_id,
+        report_date="now()",
+        is_private="TRUE",
+        drivers_license=None,
+        est_value_stolen=None,
+        description="goofy",
+    )
 
     path = "./data/database/LoganOrr.jpg"
     img = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', img)
+    _, buffer = cv2.imencode(".jpg", img)
     image2 = base64.b64encode(buffer).decode()
     images.append((image1, image2))
 
@@ -143,7 +155,7 @@ def add_sandboxers():
     person, image = create_person(path, store_id, "Spencer Kunkel")
     path = "./data/database/spencerkunkel3.png"
     image2 = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', image2)
+    _, buffer = cv2.imencode(".jpg", image2)
     image2 = base64.b64encode(buffer).decode()
     images.append((image, image2))
 
@@ -171,32 +183,34 @@ def add_sandboxers():
             banned_person_id = 0
             response = add_banned_person(person, image[0])
             banned_person_id = response.id
-            banned_person_image = BannedPersonImage(banned_person_id=banned_person_id,
-                                                    image_encoding=image[1])
+            banned_person_image = BannedPersonImage(
+                banned_person_id=banned_person_id, image_encoding=image[1]
+            )
             add_banned_person_image(banned_person_image)
 
         else:
             add_banned_person(person, image)
 
-
-
-
-
-
     # response = add_banned_person(spencer, base64image)
+
 
 def create_person(path, store_id, name):
     """
     create a person and base64 image
     """
     image = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', image)
+    _, buffer = cv2.imencode(".jpg", image)
     base64image = base64.b64encode(buffer).decode()
-    person = BannedPerson(full_name=name, reporting_store_id=store_id,
-                            report_date='now()', is_private="TRUE",
-                            drivers_license=None, est_value_stolen=None, description="goofy")
+    person = BannedPerson(
+        full_name=name,
+        reporting_store_id=store_id,
+        report_date="now()",
+        is_private="TRUE",
+        drivers_license=None,
+        est_value_stolen=None,
+        description="goofy",
+    )
     return person, base64image
-
 
 
 def add_double_image():
@@ -205,33 +219,40 @@ def add_double_image():
     """
     path = "./data/database/spencerkunkel.jpg"
     image = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', image)
+    _, buffer = cv2.imencode(".jpg", image)
     image = base64.b64encode(buffer).decode()
     banned_person_image = BannedPersonImage(banned_person_id=351, image_encoding=image)
     add_banned_person_image(banned_person_image)
     path = "./data/database/spencerkunkel3.png"
     image2 = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', image2)
+    _, buffer = cv2.imencode(".jpg", image2)
     image2 = base64.b64encode(buffer).decode()
-    banned_person_image2 = BannedPersonImage(banned_person_id=351, image_encoding=image2)
+    banned_person_image2 = BannedPersonImage(
+        banned_person_id=351, image_encoding=image2
+    )
     add_banned_person_image(banned_person_image2)
 
     path = "./data/database/loganorr.jpg"
     img = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', img)
+    _, buffer = cv2.imencode(".jpg", img)
     image1 = base64.b64encode(buffer).decode()
-    banned_person_image3 = BannedPersonImage(banned_person_id=350, image_encoding=image1)
+    banned_person_image3 = BannedPersonImage(
+        banned_person_id=350, image_encoding=image1
+    )
     add_banned_person_image(banned_person_image3)
 
     path = "./data/database/LoganOrr.jpg"
     img = cv2.imread(path)
-    _, buffer = cv2.imencode('.jpg', img)
+    _, buffer = cv2.imencode(".jpg", img)
     image2 = base64.b64encode(buffer).decode()
 
-    banned_person_image4 = BannedPersonImage(banned_person_id=350, image_encoding=image2)
+    banned_person_image4 = BannedPersonImage(
+        banned_person_id=350, image_encoding=image2
+    )
     add_banned_person_image(banned_person_image4)
 
+
 if __name__ == "__main__":
-    #add_sandboxers()
+    # add_sandboxers()
     add_double_image()
     print("Sandboxers added")

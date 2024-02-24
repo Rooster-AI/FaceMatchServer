@@ -1,5 +1,4 @@
-# pylint: disable=C0413,W0718, E0401, C4011
-
+# pylint: disable=C0413,W0718,E0401
 """
     This is the root for all endpoints, and is the file to be ran on the server
 """
@@ -8,19 +7,22 @@ import datetime
 import os
 import sys
 from flask import Flask, request, jsonify, send_file
-import facial_recognition_server.app as Funcs
-from facial_recognition_server.app import DEVICE_ID
+import app as Funcs
+from app import DEVICE_ID
+
+MAIN_DIR = os.path.dirname(__file__)
+# Parent imports
+PAR_DIR = os.path.dirname(MAIN_DIR)
+sys.path.append(PAR_DIR)
 from models.banned_person import BannedPerson
 from models.logging import Logging
 from supabase_dao import add_banned_person, database_log
 
-os.chdir(os.path.dirname(__file__))
+
+flask_server = Flask(__name__)
 
 
-app = Flask(__name__)
-
-
-@app.route("/upload-images", methods=["POST"])
+@flask_server.route("/upload-images", methods=["POST"])
 def upload_images_endpoint():
     """
     Endpoint for client to send images to server
@@ -31,7 +33,7 @@ def upload_images_endpoint():
     return jsonify(result), 400
 
 
-@app.route("/add-banned-person", methods=["POST"])
+@flask_server.route("/add-banned-person", methods=["POST"])
 def add_banned_person_endpoint():
     """
     Add a new banned person
@@ -51,7 +53,7 @@ def add_banned_person_endpoint():
     return jsonify({"message": "success"}), 200
 
 
-@app.route("/latest_database", methods=["GET"])
+@flask_server.route("/latest_database", methods=["GET"])
 def get_latest_database_pkl():
     """
     Endpoint for client to get new pkl file
@@ -63,7 +65,7 @@ def get_latest_database_pkl():
     return jsonify({"message": "Server Failed, check logs"}), 400
 
 
-@app.route("/logging", methods=["POST"])
+@flask_server.route("/logging", methods=["POST"])
 def log():
     """
     Adds a row in the logging database
@@ -92,9 +94,9 @@ def on_stop_server(exception=None):
     sys.exit(1)  # End the process with a non-zero to end in an error (for Docker)
 
 
-# if __name__ == "__main__":
-#     try:
-#         database_log(Logging(DEVICE_ID, "INFO", "Started Rooster-Server"))
-#         app.run(debug=True, threaded=True, host="0.0.0.0", port=5000)
-#     except (Exception, KeyboardInterrupt) as e:
-#         on_stop_server(e)
+if __name__ == "__main__":
+    try:
+        database_log(Logging(DEVICE_ID, "INFO", "Started Rooster-Server"))
+        flask_server.run(debug=True, threaded=True, host="0.0.0.0", port=5000)
+    except (Exception, KeyboardInterrupt) as e:
+        on_stop_server(e)
