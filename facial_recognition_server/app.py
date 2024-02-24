@@ -1,4 +1,4 @@
-# pylint: disable=C0413, C0301
+# pylint: disable=C0413, C0301, E1101
 """
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
@@ -20,10 +20,11 @@ from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
 
-os.chdir(os.path.dirname(__file__))
 
-
-sys.path.append("../")
+MAIN_DIR = os.path.dirname(__file__)
+# Parent imports
+PAR_DIR = os.path.dirname(MAIN_DIR)
+sys.path.append(PAR_DIR)
 from models.logging import Logging
 from supabase_dao import (
     get_banned_person,
@@ -42,17 +43,13 @@ BACKEND = "mtcnn"
 DIST = "cosine"
 MIN_VERIFICATIONS = 3
 MODEL_DIST = f"{MODEL}_{DIST}"
-DB = "data/master_database"
+DB = os.path.join(MAIN_DIR, "data/master_database")
 BACKEND_MIN_CONFIDENCE = 0.999
-ACTIVITY_LOG_FILE = "./archive/activity.csv"
+ACTIVITY_LOG_FILE = os.path.join(MAIN_DIR, "archive/activity.csv")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 TESTING_MODE = False
 
-
 resend.api_key = RESEND_API_KEY
-
-with open("data/startupList.json", encoding="utf-8") as f:
-    contacts = json.load(f)
 
 
 def upload_images(data):
@@ -229,10 +226,10 @@ def verify_faces(face_groups, first_frame):
 
 def make_test_directory():
     """Makes directory for storing server test results"""
-    base_directory = os.path.dirname(os.path.abspath(__file__))
-    epoch_folder = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
+    epoch_folder_name = f"archive/{datetime.now().strftime('%y-%m-%d-%H-%M-%S')}"
+    epoch_folder = os.path.join(MAIN_DIR, epoch_folder_name)
+    os.makedirs(epoch_folder, exist_ok=True)
     faces_folder = os.path.join(epoch_folder, "faces")
-    os.makedirs(os.path.join(base_directory, epoch_folder), exist_ok=True)
     os.mkdir(faces_folder)
     return faces_folder, epoch_folder
 
