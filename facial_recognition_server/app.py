@@ -24,16 +24,19 @@ os.chdir(os.path.dirname(__file__))
 
 
 sys.path.append("../")
+from models.logging import Logging
 from supabase_dao import (
     get_banned_person,
     get_banned_person_images,
     get_store_employees,
     get_store_by_id,
+    database_log,
 )
 
 
 load_dotenv()
 
+DEVICE_ID = 2  # For logging to the db
 MODEL = "ArcFace"
 BACKEND = "mtcnn"
 DIST = "cosine"
@@ -213,6 +216,14 @@ def verify_faces(face_groups, first_frame):
             write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
         else:
             send_email(match_image, first_frame, match_person)
+            database_log(
+                Logging(
+                    DEVICE_ID,
+                    "INFO",
+                    f"Found Shoplifter! Name:{match_person.full_name}, ID:{match_person.id} IN STORE: #TODO",
+                )
+            )
+
     face_groups.clear()
 
 
@@ -359,25 +370,26 @@ def send_email(match_image, first_frame, match_person):
     """
     # <a href="#" class="button">Yes, it's a match</a>
     # <a href="#" class="button">No, it's not a match</a>
-    params = {
-        "from": "Rooster <no-reply@alert.userooster.com>",
-        "to": emails[0],
-        "subject": "Alert: Shoplifter Identified in Your Store",
-        "html": html_content,
-        # we may want to add the images as attachments,
-        # but they were not working
-        # "attachments": [
-        #     {
-        #         "name": "Person in Store.jpg",
-        #         "content": first_frame.decode("utf-8"),
-        #     },
-        #     {
-        #         "name": "Match.jpg",
-        #         "content": match_image.decode("utf-8"),
-        #     },
-        # ],
-    }
-    resend.Emails.send(params)
+    for email in emails:
+        params = {
+            "from": "Rooster <no-reply@alert.userooster.com>",
+            "to": email,
+            "subject": "Alert: Shoplifter Identified in Your Store",
+            "html": html_content,
+            # we may want to add the images as attachments,
+            # but they were not working
+            # "attachments": [
+            #     {
+            #         "name": "Person in Store.jpg",
+            #         "content": first_frame.decode("utf-8"),
+            #     },
+            #     {
+            #         "name": "Match.jpg",
+            #         "content": match_image.decode("utf-8"),
+            #     },
+            # ],
+        }
+        resend.Emails.send(params)
 
 
 def send_warning_email(message: str):
