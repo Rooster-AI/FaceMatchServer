@@ -65,7 +65,7 @@ def upload_images(data):
     first_frame = images[0]
     decoded_images = decode_images(images)
 
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         all_faces = []
         s = time.time()
         to_finish_extract = [
@@ -268,7 +268,7 @@ def send_email(match_image, first_frame, match_person):
     for employee in employees:
         emails.append(employee.email)
 
-    with open("roosterLogo.png", "rb") as image_file:
+    with open(os.path.join(MAIN_DIR, "roosterLogo.png"), "rb") as image_file:
         logo = base64.b64encode(image_file.read())
 
     info = ""
@@ -466,20 +466,13 @@ def save_face(face_data, path_name):
 
 def get_id_from_file(image_path):
     """Retrieves the name associated with an image file."""
-    # use this when deepface is updated to use new id file names
-    # print(image_path)
-    # pattern = r"(\d+_\d+).jpg$"
-    # match = re.search(pattern, image_path)
-    # print(match)
-    # if match:
-    #     return match.group(1)
-    # return None
-
-    # in the meantime, use this
-    pattern = r"/([^/]+)\.jpg$"
+    pattern = r"(\d+_\d+).jpg$"
     match = re.search(pattern, image_path)
     if match:
-        return get_id_from_name(match.group(1))
+        # Extract person id from file name
+        file_name = match.group(1)
+        uid = int(file_name.split("_")[0])
+        return uid
     return None
 
 
