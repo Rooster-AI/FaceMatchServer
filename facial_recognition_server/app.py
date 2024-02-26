@@ -65,6 +65,12 @@ def upload_images(data):
     first_frame = images[0]
     decoded_images = decode_images(images)
 
+    executor = ThreadPoolExecutor(max_workers=1)
+    executor.submit(analyze_images, data, decoded_images, first_frame)
+
+    return True, {"message": f"{len(decoded_images)} files uploaded and processed"}
+
+def analyze_images(data, decoded_images, first_frame):
     with ThreadPoolExecutor(max_workers=1) as executor:
         all_faces = []
         s = time.time()
@@ -93,9 +99,6 @@ def upload_images(data):
         face_groups = make_face_groups(group_matches, all_faces)
         verify_faces(face_groups, first_frame)
         print(f"Verified Faces in {time.time()-s}s")
-
-    return True, {"message": f"{len(decoded_images)} files uploaded and processed"}
-
 
 def decode_images(images):
     """Decodes base64-encoded images and converts them to numpy arrays."""
