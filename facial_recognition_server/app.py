@@ -48,6 +48,7 @@ BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = os.path.join(MAIN_DIR, "archive/activity.csv")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 TESTING_MODE = False
+MAX_WORKERS = 4
 
 resend.api_key = RESEND_API_KEY
 
@@ -71,7 +72,7 @@ def upload_images(data):
     return True, {"message": f"{len(decoded_images)} files uploaded and processed"}
 
 def analyze_images(data, decoded_images, first_frame):
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         all_faces = []
         s = time.time()
         to_finish_extract = [
