@@ -1,4 +1,4 @@
-# pylint: disable=C0413, C0301, E1101
+# pylint: disable=C0413, C0301, E1101, C0103. E0401
 """
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
@@ -67,11 +67,14 @@ def upload_images(data):
     decoded_images = decode_images(images)
 
     executor = ThreadPoolExecutor(max_workers=1)
-    executor.submit(analyze_images, data, decoded_images, first_frame)
+    executor.submit(analyze_images, decoded_images, first_frame)
 
     return True, {"message": f"{len(decoded_images)} files uploaded and processed"}
 
-def analyze_images(data, decoded_images, first_frame):
+def analyze_images(decoded_images, first_frame):
+    '''
+    Analyzes the decoded images and ids faces.
+    '''
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         all_faces = []
         s = time.time()
@@ -194,9 +197,12 @@ def verify_faces(face_groups, first_frame):
     Verifies identified faces against groups, logs matches, and optionally sends an alert if
     a match is found. Saves face images and match data in testing mode.
     """
+    confidence_levels = {}
+    faces_folder = None
+    epoch_folder = None
+
     if TESTING_MODE:
         faces_folder, epoch_folder = make_test_directory()
-        confidence_levels = {}
     face_dict = {}
     for k, key in enumerate(face_groups.keys()):
         for i, face in enumerate(face_groups[key]):
