@@ -58,6 +58,7 @@ def get_latest_database_pkl():
     """
     Endpoint for client to get new pkl file
     """
+    print("Getting latest database", request.args)
     filepath = Funcs.get_latest_database(request.args)
     if filepath:
         return send_file(filepath, as_attachment=True)

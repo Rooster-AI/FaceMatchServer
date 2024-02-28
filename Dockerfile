@@ -15,7 +15,6 @@ RUN pip install --no-cache-dir retina-face==0.0.13
 RUN pip install --no-cache-dir tqdm==4.66.1
 RUN pip install --no-cache-dir supabase==2.3.4
 RUN pip install --no-cache-dir python-dotenv==1.0.0
-RUN pip install --no-cache-dir ultralytics
 RUN pip install --no-cache-dir resend
 
 RUN pip install opencv-python-headless

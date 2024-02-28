@@ -577,6 +577,7 @@ def get_latest_database(args):
     images from the database down and recreate the .pkl files
 
     """
+    print("hio")
     model = args.get("model")
     backend = args.get("backend")
     print("hio")
@@ -584,7 +585,7 @@ def get_latest_database(args):
         model = "ArcFace"
         backend = "mtcnn"  # By default return the yolov8 version
     filename = f"representations_{model.lower().replace('-','_')}_{backend.lower().replace('-','_')}.pkl"
-
+    print("filename: ", filename)
     filepath = os.path.join(os.getcwd(), "data", "master_database", filename)
     if os.path.exists(filepath):
         return filepath
