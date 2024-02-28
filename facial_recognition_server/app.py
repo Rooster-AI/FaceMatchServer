@@ -47,11 +47,10 @@ DB = os.path.join(MAIN_DIR, "data/master_database")
 BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = os.path.join(MAIN_DIR, "archive/activity.csv")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-TESTING_MODE = False
+TESTING_MODE = True
 MAX_WORKERS = 4
 
 resend.api_key = RESEND_API_KEY
-
 
 def upload_images(data):
     """
@@ -82,6 +81,7 @@ def analyze_images(decoded_images, first_frame):
             executor.submit(extract, frame, all_faces) for frame in decoded_images
         ]
         wait(to_finish_extract)
+        extract_time = time.time() - s
         if TESTING_MODE:
             print(f"Extracted {len(all_faces)} Faces in {time.time()-s}s")
 
@@ -93,6 +93,7 @@ def analyze_images(decoded_images, first_frame):
                 executor.submit(comp_face, face, i, all_faces[i + 1 :], group_matches)
             )
         wait(finish_comps)
+        grouped_time = time.time() - s
         if TESTING_MODE:
             print(f"Grouped Faces in {time.time() - s}s")
             print(
@@ -101,7 +102,9 @@ def analyze_images(decoded_images, first_frame):
 
         s = time.time()
         face_groups = make_face_groups(group_matches, all_faces)
-        verify_faces(face_groups, first_frame)
+        verify_time = time.time() - s
+
+        verify_faces(face_groups, first_frame, extract_time, grouped_time, verify_time)
         print(f"Verified Faces in {time.time()-s}s")
 
 def decode_images(images):
@@ -192,7 +195,7 @@ def extract(frame, all_faces):
     return
 
 
-def verify_faces(face_groups, first_frame):
+def verify_faces(face_groups, first_frame, extract_time, grouped_time, verify_time):
     """
     Verifies identified faces against groups, logs matches, and optionally sends an alert if
     a match is found. Saves face images and match data in testing mode.
@@ -219,10 +222,11 @@ def verify_faces(face_groups, first_frame):
         match_person = get_banned_person(match)
         match_image = get_banned_person_images(match)[0].image
 
-        if TESTING_MODE:
+        
+        if not TESTING_MODE:
             write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
         else:
-            send_email(match_image, first_frame, match_person)
+            send_email(match_image, first_frame, match_person, extract_time, grouped_time, verify_time)
             database_log(
                 Logging(
                     DEVICE_ID,
@@ -265,7 +269,7 @@ def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
             writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
 
 
-def send_email(match_image, first_frame, match_person):
+def send_email(match_image, first_frame, match_person, extract_time, grouped_time, verify_time):
     """Sends an email alert with attached images for shoplifter identification."""
 
     # TO DO - Add the email address of the store owner to the "to" list
@@ -300,6 +304,12 @@ def send_email(match_image, first_frame, match_person):
     if match_person.reporting_store_id:
         reporting_store = get_store_by_id(match_person.reporting_store_id)
         info += f"<p>Reporting Store: {reporting_store.name}</p>"
+
+
+    TESTING_MODE = True
+    times = ""
+    if TESTING_MODE:
+        times = f"<p>Extract Time: {extract_time}</p><p>Group Time: {grouped_time}</p><p>Verify Time: {verify_time}</p>"
 
     html_content = f"""
         <!DOCTYPE html>
@@ -352,6 +362,8 @@ def send_email(match_image, first_frame, match_person):
         }}
 
 
+
+
         </style>
         </head>
         <body>
@@ -368,6 +380,7 @@ def send_email(match_image, first_frame, match_person):
                 </div>
                 <p>Is this a match?</p>
                 <p>{info}</p>
+                <p>{times}</p>
                 <div class="footer">
                     <p>Contact us for support at support@userooster.com</p>
                 </div>
