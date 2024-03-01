@@ -32,15 +32,15 @@ def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
     if mode == "EMAIL":
         send_email(match_image, first_frame, match_person, employees)
         return
-    elif mode == "TEXT":
+    if mode == "TEXT":
         print("Notify mode not setup yet")
         return
-    elif mode == "IN_APP":
+    if mode == "IN_APP":
         print("Notify mode not setup yet")
         return
-    else:
-        print("Notify mode not valid")
-        return
+
+    print("Notify mode not valid")
+    return
 
 
 def send_email(match_image, first_frame, match_person, employees):
