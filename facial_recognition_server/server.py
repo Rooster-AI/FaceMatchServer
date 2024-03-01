@@ -8,6 +8,7 @@ import os
 import sys
 from flask import Flask, request, jsonify, send_file
 import app as Funcs
+from alert import send_warning_email
 from app import DEVICE_ID
 
 MAIN_DIR = os.path.dirname(__file__)
@@ -87,7 +88,7 @@ def on_stop_server(exception=None):
     """
     Runs when the flask server crashes, or ctrl c is pressed
     """
-    Funcs.send_warning_email("Rooster-Server Down, check database for error")
+    send_warning_email("Rooster-Server Down, check database for error")
     database_log(
         Logging(DEVICE_ID, "ERROR", f"Rooster-Server Down on error: {exception}")
     )
