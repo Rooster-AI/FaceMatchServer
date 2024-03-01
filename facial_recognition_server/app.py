@@ -81,7 +81,7 @@ def analyze_images(decoded_images, first_frame, device_id):
             executor.submit(extract, frame, all_faces) for frame in decoded_images
         ]
         wait(to_finish_extract)
-        if True:  # TESTING_MODE:
+        if TESTING_MODE:
             print(f"Extracted {len(all_faces)} Faces in {time.time()-s}s")
 
         s = time.time()
@@ -92,7 +92,7 @@ def analyze_images(decoded_images, first_frame, device_id):
                 executor.submit(comp_face, face, i, all_faces[i + 1 :], group_matches)
             )
         wait(finish_comps)
-        if True:  # TESTING_MODE:
+        if TESTING_MODE:
             print(f"Grouped Faces in {time.time() - s}s")
             print(
                 f"Group Sizes: {[len(group_matches[a]) for a in group_matches.keys()]}"
