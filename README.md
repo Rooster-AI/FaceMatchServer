@@ -60,7 +60,13 @@ Before running this server, ensure you have the following dependencies installed
 
 ### POST: /upload-images
 - headers: application/json
-- body: {'images':['','']} // List of base64 encoded images
+- body: 
+```json
+{
+   "images":["",""],
+   "device_id": "string"
+}
+```
 
 ### POST: /add-banned-person
 - headers: application/json
