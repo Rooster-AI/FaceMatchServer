@@ -29,16 +29,13 @@ resend.api_key = RESEND_API_KEY
 def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
     """Notifies the necessary parties that the person is in the store"""
     employees = get_store_employees_from_device(device_id)
-    print(employees)
     if mode == "EMAIL":
         send_email(match_image, first_frame, match_person, employees)
         return
     elif mode == "TEXT":
-        # TODO
         print("Notify mode not setup yet")
         return
     elif mode == "IN_APP":
-        # TODO
         print("Notify mode not setup yet")
         return
     else:
@@ -55,7 +52,6 @@ def send_email(match_image, first_frame, match_person, employees):
 
     emails = []
     for employee in employees:
-        print(employee.email)
         emails.append(employee.email)
 
     with open(os.path.join(MAIN_DIR, "roosterLogo.png"), "rb") as image_file:
