@@ -12,16 +12,17 @@ import json
 import csv
 import sys
 from concurrent.futures import ThreadPoolExecutor, wait
-from dotenv import load_dotenv
 import numpy as np
 import cv2
-import resend
 from PIL import Image as im
 from deepface import DeepFace
 from deepface.rooster_deepface import match_face, verify, get_embedding
 
 
 MAIN_DIR = os.path.dirname(__file__)
+sys.path.append(MAIN_DIR)
+from alert import notify
+
 # Parent imports
 PAR_DIR = os.path.dirname(MAIN_DIR)
 sys.path.append(PAR_DIR)
@@ -29,13 +30,9 @@ from models.logging import Logging
 from supabase_dao import (
     get_banned_person,
     get_banned_person_images,
-    get_store_employees,
-    get_store_by_id,
     database_log,
 )
 
-
-load_dotenv()
 
 DEVICE_ID = 2  # For logging to the db
 MODEL = "ArcFace"
@@ -46,11 +43,8 @@ MODEL_DIST = f"{MODEL}_{DIST}"
 DB = os.path.join(MAIN_DIR, "data/master_database")
 BACKEND_MIN_CONFIDENCE = 0.999
 ACTIVITY_LOG_FILE = os.path.join(MAIN_DIR, "archive/activity.csv")
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 TESTING_MODE = False
 MAX_WORKERS = 4
-
-resend.api_key = RESEND_API_KEY
 
 
 def upload_images(data):
@@ -62,19 +56,24 @@ def upload_images(data):
     """
     if "images" not in data:
         return False, {"message": "No images found in the request"}
+    if "device_id" not in data:
+        return False, {"message": "No device id found in the request"}
+
     images = data["images"]
+    device_id = data["device_id"]
     first_frame = images[0]
     decoded_images = decode_images(images)
 
     executor = ThreadPoolExecutor(max_workers=1)
-    executor.submit(analyze_images, decoded_images, first_frame)
+    executor.submit(analyze_images, decoded_images, first_frame, device_id)
 
     return True, {"message": f"{len(decoded_images)} files uploaded and processed"}
 
-def analyze_images(decoded_images, first_frame):
-    '''
+
+def analyze_images(decoded_images, first_frame, device_id):
+    """
     Analyzes the decoded images and ids faces.
-    '''
+    """
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         all_faces = []
         s = time.time()
@@ -101,8 +100,9 @@ def analyze_images(decoded_images, first_frame):
 
         s = time.time()
         face_groups = make_face_groups(group_matches, all_faces)
-        verify_faces(face_groups, first_frame)
+        verify_faces(face_groups, first_frame, device_id)
         print(f"Verified Faces in {time.time()-s}s")
+
 
 def decode_images(images):
     """Decodes base64-encoded images and converts them to numpy arrays."""
@@ -192,7 +192,7 @@ def extract(frame, all_faces):
     return
 
 
-def verify_faces(face_groups, first_frame):
+def verify_faces(face_groups, first_frame, device_id):
     """
     Verifies identified faces against groups, logs matches, and optionally sends an alert if
     a match is found. Saves face images and match data in testing mode.
@@ -222,7 +222,7 @@ def verify_faces(face_groups, first_frame):
         if TESTING_MODE:
             write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
         else:
-            send_email(match_image, first_frame, match_person)
+            notify(match_image, first_frame, match_person, device_id)
             database_log(
                 Logging(
                     DEVICE_ID,
@@ -263,161 +263,6 @@ def write_to_test_directory(match, face_dict, confidence_levels, epoch_folder):
         with open(ACTIVITY_LOG_FILE, "a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerow([match, datetime.now().strftime("%y-%m-%d %H:%M:%S")])
-
-
-def send_email(match_image, first_frame, match_person):
-    """Sends an email alert with attached images for shoplifter identification."""
-
-    # TO DO - Add the email address of the store owner to the "to" list
-    # TO DO - Add the information of the match to the email content
-    # print(match_image)
-    store_id = match_person.reporting_store_id
-    employees = get_store_employees(store_id)
-
-    emails = []
-    for employee in employees:
-        emails.append(employee.email)
-
-    with open(os.path.join(MAIN_DIR, "roosterLogo.png"), "rb") as image_file:
-        logo = base64.b64encode(image_file.read())
-
-    info = ""
-    if match_person.full_name:
-        info += f"<p>Name: {match_person.full_name}</p>"
-
-    if match_person.drivers_license:
-        info += f"<p>Drivers License: {match_person.drivers_license}</p>"
-
-    if match_person.est_value_stolen:
-        info += f"<p>Estimated Value Stolen: {match_person.est_value_stolen}</p>"
-
-    if match_person.description:
-        info += f"<p>Description: {match_person.description}</p>"
-
-    if match_person.report_date:
-        info += f"<p>Report Date: {match_person.report_date}</p>"
-
-    if match_person.reporting_store_id:
-        reporting_store = get_store_by_id(match_person.reporting_store_id)
-        info += f"<p>Reporting Store: {reporting_store.name}</p>"
-
-    html_content = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Rooster Identity Confirmation</title>
-        <style>
-        body {{
-            font-family: Arial, sans-serif;
-            background-color: #c22026; /* Adjusted to match logo color */
-            color: #000000;
-            padding: 20px;
-        }}
-        .email-container {{
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            text-align: center;
-        }}
-        .header {{
-            background-color: #fff; /* Adjusted to match logo color */
-            padding: 10px;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-        }}
-        .footer {{
-            background-color: #c22026; /* Adjusted to match logo color */
-            padding: 10px;
-            text-align: center;
-            border-radius: 0 0 8px 8px;
-            color: #ffffff;
-        }}
-        .button {{
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 10px 0;
-            background-color: #c22026;
-            color: #ffffff !important;
-            text-decoration: none;
-            border-radius: 4px;
-        }}
-        a {{
-            color: #ffffff !important;
-            text-decoration: none;
-        }}
-
-
-        </style>
-        </head>
-        <body>
-            <div class="email-container">
-                <div class="header">
-                    <img src="data:image/jpeg;base64,{logo.decode('utf-8')}" alt="Rooster Logo" class="image" width="100">
-                </div>
-
-                <h1>Confirm the Match</h1>
-                <p>Please review the images below to confirm the identity of the individual:</p>
-                <div>
-                    <img src="data:image/jpeg;base64,{first_frame}" alt="Person in Store" class="image" style="margin-center: 10px;">
-                    <img src="data:image/jpeg;base64,{match_image}" alt="Match" class="image" style="margin-center: 10px;">
-                </div>
-                <p>Is this a match?</p>
-                <p>{info}</p>
-                <div class="footer">
-                    <p>Contact us for support at support@userooster.com</p>
-                </div>
-            </div>
-        </body>
-        </html>
-    """
-    # <a href="#" class="button">Yes, it's a match</a>
-    # <a href="#" class="button">No, it's not a match</a>
-    for email in emails:
-        params = {
-            "from": "Rooster <no-reply@alert.userooster.com>",
-            "to": email,
-            "subject": "Alert: Shoplifter Identified in Your Store",
-            "html": html_content,
-            # we may want to add the images as attachments,
-            # but they were not working
-            # "attachments": [
-            #     {
-            #         "name": "Person in Store.jpg",
-            #         "content": first_frame.decode("utf-8"),
-            #     },
-            #     {
-            #         "name": "Match.jpg",
-            #         "content": match_image.decode("utf-8"),
-            #     },
-            # ],
-        }
-        resend.Emails.send(params)
-
-
-def send_warning_email(message: str):
-    """Sends a warning email to founders of rooster"""
-
-    founders = get_store_employees(472)  # 472 is Rooster
-
-    emails = []
-    for employee in founders:
-        emails.append(employee.email)
-
-    html_content = f"<html><body>{message}</body></html>"
-
-    for email in emails:
-        params = {
-            "from": "Rooster <no-reply@alert.userooster.com>",
-            "to": email,
-            "subject": "!!Rooster FOUNDERS: There is a problem!!",
-            "html": html_content,
-        }
-        resend.Emails.send(params)
 
 
 def finder(facial_data, face_dict):

@@ -160,6 +160,24 @@ def delete_store_by_id(store_id):
     return store
 
 
+def get_store_employees_from_device(device_id):
+    """
+    Get all employees of a store from the store that is associated with a device_id
+    """
+    supabase = get_client()
+
+    data, _ = supabase.table("device").select("*").eq("id", device_id).execute()
+
+    # Check if a matching device was found
+    if data[1]:
+        # Get the 'store_id' from the matching device
+        store_id = data[1][0]["store_id"]
+
+        return get_store_employees(store_id)
+
+    return []
+
+
 def get_store_employees(store_id):
     """
     Get all employees of a store
