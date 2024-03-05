@@ -48,13 +48,25 @@ jobs:
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p "${{ secrets.DOCKER_PASSWORD }}"
         docker push roosteradmin/serverimage:latest
-
-    - name: Deploy to EC2
+    
+    - name: Get Instance ID
+      id: instance
       run: |
-        set -o pipefail
-        aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
-        aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-        aws configure set region us-west-1
-        aws ec2 run-instances --image-id ami-02d3fd86e6a2f5122 --instance-type inf1.xlarge --key-name rooster-server-1 --security-group-ids sg-09b7f528fc3ae2d4c sg-065c09b2c422fc947 --subnet-id subnet-045a43e6383bd6d41 --user-data '#!/bin/bash -ex\n'
+        INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=rooster-server" --query 'Reservations[*].Instances[*].InstanceId' --output text)
+        echo "::set-output name=instance_id::$INSTANCE_ID"
+    
+    - name: Stop Instance
+      if: steps.instance.outputs.instance_id != ''
+      run: |
+        aws ec2 stop-instances --instance-ids ${{ steps.instance.outputs.instance_id }}
+        aws ec2 wait instance-stopped --instance-ids ${{ steps.instance.outputs.instance_id }}
+    
+    - name: Update Docker image
+      run: |
         docker pull roosteradmin/serverimage:latest
-        docker run -d -p 5000:5000 --restart always roosteradmin/serverimage:latest
+    
+    - name: Start Instance
+      if: steps.instance.outputs.instance_id != ''
+      run: |
+        aws ec2 start-instances --instance-ids ${{ steps.instance.outputs.instance_id }}
+        aws ec2 wait instance-running --instance-ids ${{ steps.instance.outputs.instance_id }}
