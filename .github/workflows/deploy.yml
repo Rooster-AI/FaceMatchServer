@@ -55,6 +55,6 @@ jobs:
         aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
         aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
         aws configure set region us-west-1
-        aws ec2 run-instances --image-id ami-02d3fd86e6a2f5122 --instance-type inf1.xlarge --key-name rooster-server-1 --security-group-ids sg-09b7f528fc3ae2d4c sg-065c09b2c422fc947 --subnet-id subnet-045a43e6383bd6d41 --user-data '#!/bin/bash -ex\n
+        aws ec2 run-instances --image-id ami-02d3fd86e6a2f5122 --instance-type inf1.xlarge --key-name rooster-server-1 --security-group-ids sg-09b7f528fc3ae2d4c sg-065c09b2c422fc947 --subnet-id subnet-045a43e6383bd6d41 --user-data '#!/bin/bash -ex\n'
         docker pull roosteradmin/serverimage:latest
         docker run -d -p 5000:5000 --restart always roosteradmin/serverimage:latest
