@@ -43,7 +43,10 @@ jobs:
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p "${{ secrets.DOCKER_PASSWORD }}"
         docker push roosteradmin/serverimage:latest
-
+    - name: Debug Secrets
+      run: |
+        echo "AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}"
+        echo "AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}"
     - name: Deploy to EC2
       run: |
         aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
