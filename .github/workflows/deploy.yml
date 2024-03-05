@@ -49,6 +49,12 @@ jobs:
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p "${{ secrets.DOCKER_PASSWORD }}"
         docker push roosteradmin/serverimage:latest
     
+    - name: Configure AWS credentials
+      run: |
+        aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
+        aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+        aws configure set default.region us-west-1
+      
     - name: Get Instance ID
       id: instance
       run: |
