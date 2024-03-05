@@ -29,6 +29,12 @@ jobs:
         pip install supabase
         pip install python-dotenv
 
+    - name: Create .env file
+      run: |
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+        echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env
+
     - name: Build Docker image
       run: |
         docker build -t roosteradmin/serverimage:latest .
