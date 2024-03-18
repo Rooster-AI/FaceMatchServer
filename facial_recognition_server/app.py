@@ -1,4 +1,4 @@
-# pylint: disable=C0413, C0301, E1101, C0103. E0401
+# pylint: disable=C0413, C0301, E1101, C0103. E0401, E0611
 """
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
