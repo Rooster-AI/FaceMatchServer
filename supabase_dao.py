@@ -518,7 +518,7 @@ def database_log(log: Logging):
 
     return log
 
-def logAlert(alert: Alert):
+def log_alert(alert: Alert):
     """
     Add a row in the logging database
     """

@@ -1,4 +1,4 @@
-# pylint: disable=C0413,
+# pylint: disable=C0413,E0401
 """
     Contains the code for sending alerts
 """
@@ -8,7 +8,6 @@ import os
 import base64
 import resend
 from dotenv import load_dotenv
-from models.alert import Alert
 
 MAIN_DIR = os.path.dirname(__file__)
 sys.path.append(MAIN_DIR)
@@ -16,11 +15,12 @@ sys.path.append(MAIN_DIR)
 # Parent imports
 PAR_DIR = os.path.dirname(MAIN_DIR)
 sys.path.append(PAR_DIR)
+from models.alert import Alert
 from supabase_dao import (
     get_store_employees,
     get_store_by_id,
     get_store_employees_from_device,
-    logAlert,
+    log_alert,
 )
 
 load_dotenv()
@@ -32,7 +32,7 @@ def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
     """Notifies the necessary parties that the person is in the store"""
     match_person.id = 8
     alert = Alert(None, match_person.id, match_image, None, None, 1)
-    logAlert(alert)
+    log_alert(alert)
 
     employees = get_store_employees_from_device(device_id)
     if mode == "EMAIL":
