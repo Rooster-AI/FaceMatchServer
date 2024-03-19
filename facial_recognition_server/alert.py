@@ -30,7 +30,6 @@ resend.api_key = RESEND_API_KEY
 
 def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
     """Notifies the necessary parties that the person is in the store"""
-    match_person.id = 8
     alert = Alert(None, match_person.id, match_image, None, None, 1)
     log_alert(alert)
 
