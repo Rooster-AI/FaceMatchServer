@@ -5,6 +5,7 @@ A seris of functions that interact with the Supabase database.
 import os
 from supabase import create_client
 from dotenv import load_dotenv
+from models.alert import Alert
 from models.banned_person import BannedPerson
 from models.banned_person_image import BannedPersonImage
 from models.logging import Logging
@@ -516,3 +517,31 @@ def database_log(log: Logging):
     )
 
     return log
+
+def log_alert(alert: Alert):
+    """
+    Add a row in the logging database
+    """
+    supabase = get_client()
+    data, _ = (
+        supabase.table("alerts").insert(
+        [
+            {
+                "banned_person_id": alert.banned_person_id,
+                "image": alert.image,
+                "alerted_store": 1,
+            }
+        ]
+    ).execute()
+    )
+
+    alert = Alert(
+        data[1][0]["alert_id"],
+        data[1][0]["banned_person_id"],
+        data[1][0]["image"],
+        data[1][0]["timestamp"],
+        data[1][0]["description"],
+        data[1][0]["alerted_store"],
+    )
+
+    return alert

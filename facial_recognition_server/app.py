@@ -1,4 +1,4 @@
-# pylint: disable=C0413, C0301, E1101, C0103. E0401
+# pylint: disable=C0413, C0301, E1101, C0103. E0401, E0611
 """
     This module uses Flask and DeepFace to recognize faces in uploaded images.
     It checks images against a database to find matches and can send alerts for identified faces.
@@ -225,9 +225,20 @@ def verify_faces(face_groups, first_frame, device_id):
             notify(match_image, first_frame, match_person, device_id)
             database_log(
                 Logging(
-                    DEVICE_ID,
+                    device_id,
                     "INFO",
-                    f"Found Shoplifter! Name:{match_person.full_name}, ID:{match_person.id} IN STORE: #TODO",
+                    f"Found Shoplifter! Name:{match_person.full_name}, ID:{match_person.id} IN STORE: {device_id}",
+                )
+            )
+
+    else:
+        if not TESTING_MODE:
+            print("Match was not verified by server. Device id: ", device_id)
+            database_log(
+                Logging(
+                    device_id,
+                    "INFO",
+                    f"Match was not verified by server. Device id: {device_id}",
                 )
             )
 

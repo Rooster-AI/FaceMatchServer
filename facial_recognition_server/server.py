@@ -1,4 +1,4 @@
-# pylint: disable=C0413,W0718,E0401
+# pylint: disable=C0413,W0718,E0401,E0611
 """
     This is the root for all endpoints, and is the file to be ran on the server
 """

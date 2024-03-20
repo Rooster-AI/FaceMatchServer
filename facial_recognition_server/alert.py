@@ -1,4 +1,4 @@
-# pylint: disable=C0413,
+# pylint: disable=C0413,E0401
 """
     Contains the code for sending alerts
 """
@@ -15,10 +15,12 @@ sys.path.append(MAIN_DIR)
 # Parent imports
 PAR_DIR = os.path.dirname(MAIN_DIR)
 sys.path.append(PAR_DIR)
+from models.alert import Alert
 from supabase_dao import (
     get_store_employees,
     get_store_by_id,
     get_store_employees_from_device,
+    log_alert,
 )
 
 load_dotenv()
@@ -28,6 +30,9 @@ resend.api_key = RESEND_API_KEY
 
 def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
     """Notifies the necessary parties that the person is in the store"""
+    alert = Alert(None, match_person.id, match_image, None, None, 1)
+    log_alert(alert)
+
     employees = get_store_employees_from_device(device_id)
     if mode == "EMAIL":
         send_email(match_image, first_frame, match_person, employees)
