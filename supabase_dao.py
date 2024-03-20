@@ -523,8 +523,6 @@ def log_alert(alert: Alert):
     Add a row in the logging database
     """
     supabase = get_client()
-    print(url, key)
-    print(supabase)
     data, _ = (
         supabase.table("alerts").insert(
         [
