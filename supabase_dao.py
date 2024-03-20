@@ -523,8 +523,6 @@ def log_alert(alert: Alert):
     Add a row in the logging database
     """
     supabase = get_client()
-
-
     data, _ = (
         supabase.table("alerts").insert(
         [
@@ -539,16 +537,14 @@ def log_alert(alert: Alert):
     ).execute()
     )
 
-
-
     alert = Alert(
         data[1][0]["alert_id"],
         data[1][0]["banned_person_id"],
-        data[1][0]["image"],
+        data[1][0]["banned_person_image"],
+        data[1][0]["matched_frame"],
         data[1][0]["timestamp"],
         data[1][0]["description"],
         data[1][0]["alerted_store"],
     )
 
     return alert
-    # return None
