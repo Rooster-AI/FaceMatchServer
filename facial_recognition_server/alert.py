@@ -30,6 +30,7 @@ resend.api_key = RESEND_API_KEY
 
 def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
     """Notifies the necessary parties that the person is in the store"""
+
     alert = Alert(
         alert_id=None,
         banned_person_id=match_person.id,
@@ -38,7 +39,7 @@ def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
         timestamp=None,
         description=None,
         alerted_store=461) # to do get the store id from the device id
-    
+
     log_alert(alert)
 
     employees = get_store_employees_from_device(device_id)
