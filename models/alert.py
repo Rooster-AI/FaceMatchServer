@@ -6,6 +6,7 @@ class Alert:
     """
     The model of an alert
     """
+
     def __init__(self, alert_id, banned_person_id, banned_person_image, matched_frame, timestamp, description, alerted_store):
         self.alert_id = alert_id
         self.banned_person_id = banned_person_id
@@ -23,4 +24,4 @@ class Alert:
             timestamp: {self.timestamp}, \
             description: {self.description}, \
             alertedStore: {self.alerted_store}'
-    
+

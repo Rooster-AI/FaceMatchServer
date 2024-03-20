@@ -524,7 +524,6 @@ def log_alert(alert: Alert):
     """
     supabase = get_client()
 
-
     data, _ = (
         supabase.table("alerts").insert(
         [
@@ -534,11 +533,11 @@ def log_alert(alert: Alert):
                 "matched_frame": alert.matched_frame,
                 "description": alert.description,
                 "alerted_store": alert.alerted_store,
+
             }
         ]
     ).execute()
     )
-
 
 
     alert = Alert(
@@ -551,4 +550,4 @@ def log_alert(alert: Alert):
     )
 
     return alert
-    # return None
+
