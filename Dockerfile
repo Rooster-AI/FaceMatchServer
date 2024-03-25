@@ -29,9 +29,6 @@ COPY main_prod.py .
 COPY supabase_dao.py .
 COPY models models
 COPY .env .
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Copy cron file to the cron.d directory on container
 COPY cron /etc/cron.d/cron
