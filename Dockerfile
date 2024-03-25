@@ -2,6 +2,9 @@ FROM python:3.9
 
 WORKDIR .
 
+# Install cron
+RUN apt-get update && apt-get install -y cron
+
 # Install dependencies one by one for better caching
 RUN pip install --no-cache-dir "git+https://github.com/Rooster-AI/rooster-deepface.git"
 RUN pip install --no-cache-dir Flask==3.0.2 
@@ -27,7 +30,18 @@ COPY supabase_dao.py .
 COPY models models
 COPY .env .
 
+# Copy cron file to the cron.d directory on container
+COPY cron /etc/cron.d/cron
+
+# Give execution access
+RUN chmod 0644 /etc/cron.d/cron
+
+# Run cron job on cron file
+RUN crontab /etc/cron.d/cron
+
+# Create the log file
+RUN touch /var/log/cron.log
 
 EXPOSE 5000:5000
 
-CMD ["sh", "-c", "python facial_recognition_server/rooster_update.py && gunicorn --workers 2 --threads 22 --worker-class=gthread --bind 0.0.0.0:5000 main_prod:app --timeout 90"]
+CMD cron && gunicorn --workers 2 --threads 22 --worker-class=gthread --bind 0.0.0.0:5000 main_prod:app --timeout 90 && tail -f /var/log/cron.log
