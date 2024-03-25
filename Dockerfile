@@ -29,17 +29,22 @@ COPY main_prod.py .
 COPY supabase_dao.py .
 COPY models models
 COPY .env .
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Copy the cron job file
-COPY crontab /etc/cron.d/rooster-cron
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Give execution rights on the cron job
-RUN chmod 0644 /etc/cron.d/rooster-cron
+# Copy cron file to the cron.d directory on container
+COPY cron /etc/cron.d/cron
 
-# Apply cron job
-RUN crontab /etc/cron.d/rooster-cron
+# Give execution access
+RUN chmod 0644 /etc/cron.d/cron
 
+# Run cron job on cron file
+RUN crontab /etc/cron.d/cron
+
+# Create the log file
+RUN touch /var/log/cron.log
 
 EXPOSE 5000:5000
 
-CMD ["sh", "-c", "cron && gunicorn --workers 2 --threads 22 --worker-class=gthread --bind 0.0.0.0:5000 main_prod:app --timeout 90"]
+CMD cron && gunicorn --workers 2 --threads 22 --worker-class=gthread --bind 0.0.0.0:5000 main_prod:app --timeout 90 && tail -f /var/log/cron.log
