@@ -1,0 +1,1 @@
+0 0 * * * /usr/local/bin/python /facial_recognition_server/rooster_update.py >> /var/log/cron.log 2>&1

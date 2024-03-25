@@ -1,2 +1,0 @@
-# Run rooster_update.py every midnight
-0 0 * * * python /facial_recognition_server/rooster_update.py
