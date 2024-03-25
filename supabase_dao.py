@@ -528,8 +528,11 @@ def log_alert(alert: Alert):
         [
             {
                 "banned_person_id": alert.banned_person_id,
-                "image": alert.image,
-                "alerted_store": 1,
+                "banned_person_image": alert.banned_person_image,
+                "matched_frame": alert.matched_frame,
+                "description": alert.description,
+                "alerted_store": alert.alerted_store,
+
             }
         ]
     ).execute()
@@ -538,7 +541,8 @@ def log_alert(alert: Alert):
     alert = Alert(
         data[1][0]["alert_id"],
         data[1][0]["banned_person_id"],
-        data[1][0]["image"],
+        data[1][0]["banned_person_image"],
+        data[1][0]["matched_frame"],
         data[1][0]["timestamp"],
         data[1][0]["description"],
         data[1][0]["alerted_store"],
