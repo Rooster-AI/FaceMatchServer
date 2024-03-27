@@ -68,12 +68,6 @@ jobs:
         aws ec2 wait instance-stopped --instance-ids ${{ steps.instance.outputs.instance_id }}
         # Add other steps here (e.g., Build and Push Docker image)
 
-    - name: SSH and Pull Docker Image on EC2
-      run: |
-        eval "$(ssh-agent -s)"
-        echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | tr -d '\r' | ssh-add -
-        ssh -o StrictHostKeyChecking=no ec2-user@13.56.83.102 "docker pull ***/serverimage:latest && docker ps -q --filter 'ancestor=***/serverimage:latest' | xargs -r docker stop && docker run -d --name rooster-server ***/serverimage:latest"
-        
     - name: Start Instance
       if: steps.instance.outputs.instance_id != ''
       run: |
