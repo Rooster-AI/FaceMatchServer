@@ -66,10 +66,13 @@ jobs:
       run: |
         aws ec2 stop-instances --instance-ids ${{ steps.instance.outputs.instance_id }}
         aws ec2 wait instance-stopped --instance-ids ${{ steps.instance.outputs.instance_id }}
-    
-    - name: Update Docker image
+        # Add other steps here (e.g., Build and Push Docker image)
+
+    - name: SSH and Pull Docker Image on EC2
       run: |
-        docker pull roosteradmin/serverimage:latest
+        ssh -o StrictHostKeyChecking=no -i <(echo "$AWS_SSH_PRIVATE_KEY") ec2-user@172.28.36.106 "docker pull roosteradmin/serverimage:latest && docker ps -q --filter "ancestor=roosteradmin/serverimage:latest" | xargs -r docker stop && docker run -d --name rooster-server roosteradmin/serverimage:latest"
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     
     - name: Start Instance
       if: steps.instance.outputs.instance_id != ''
