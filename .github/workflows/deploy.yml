@@ -70,10 +70,10 @@ jobs:
 
     - name: SSH and Pull Docker Image on EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i <(echo "$AWS_SSH_PRIVATE_KEY") ec2-user@172.28.36.106 "docker pull roosteradmin/serverimage:latest && docker ps -q --filter "ancestor=roosteradmin/serverimage:latest" | xargs -r docker stop && docker run -d --name rooster-server roosteradmin/serverimage:latest"
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-    
+        eval "$(ssh-agent -s)"
+        echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | tr -d '\r' | ssh-add -
+        ssh -o StrictHostKeyChecking=no ec2-user@172.28.36.106 "docker pull ***/serverimage:latest && docker ps -q --filter 'ancestor=***/serverimage:latest' | xargs -r docker stop && docker run -d --name rooster-server ***/serverimage:latest"
+        
     - name: Start Instance
       if: steps.instance.outputs.instance_id != ''
       run: |
