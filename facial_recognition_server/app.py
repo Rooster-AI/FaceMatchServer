@@ -422,13 +422,12 @@ def get_latest_database(args):
     """
     model = args.get("model")
     backend = args.get("backend")
-    print("hio")
     if not model or not backend:
         model = "ArcFace"
         backend = "mtcnn"  # By default return the yolov8 version
     filename = f"representations_{model.lower().replace('-','_')}_{backend.lower().replace('-','_')}.pkl"
 
-    filepath = os.path.join(os.getcwd(), "data", "master_database", filename)
+    filepath = os.path.join(os.getcwd(),"facial_recognition_server", "data", "master_database", filename)
     if os.path.exists(filepath):
         return filepath
     return False
