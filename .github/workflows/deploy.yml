@@ -66,11 +66,8 @@ jobs:
       run: |
         aws ec2 stop-instances --instance-ids ${{ steps.instance.outputs.instance_id }}
         aws ec2 wait instance-stopped --instance-ids ${{ steps.instance.outputs.instance_id }}
-    
-    - name: Update Docker image
-      run: |
-        docker pull roosteradmin/serverimage:latest
-    
+        # Add other steps here (e.g., Build and Push Docker image)
+
     - name: Start Instance
       if: steps.instance.outputs.instance_id != ''
       run: |
