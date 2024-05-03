@@ -2,11 +2,16 @@
 """
     Contains the code for sending alerts
 """
-
+import time
 import sys
 import os
 import base64
 import resend
+import boto3
+import uuid
+from io import BytesIO
+
+from twilio.rest import Client
 from dotenv import load_dotenv
 
 MAIN_DIR = os.path.dirname(__file__)
@@ -17,6 +22,7 @@ PAR_DIR = os.path.dirname(MAIN_DIR)
 sys.path.append(PAR_DIR)
 from models.alert import Alert
 from supabase_dao import (
+    database_log,
     get_store_employees,
     get_store_by_id,
     get_store_employees_from_device,
@@ -26,28 +32,36 @@ from supabase_dao import (
 load_dotenv()
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 resend.api_key = RESEND_API_KEY
+AWS_ACCESS_S3_KEY = os.getenv('AWS_ACCESS_S3_KEY')
+AWS_SECRET_ACCESS_S3_KEY = os.getenv('AWS_SECRET_ACCESS_S3_KEY')
 
 
-def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
+def notify(match_image, first_frame, match_person, device_id, mode="EMAIL", test_mode=False):
     """Notifies the necessary parties that the person is in the store"""
 
-    alert = Alert(
-        alert_id=None,
-        banned_person_id=match_person.id,
-        banned_person_image=match_image,
-        matched_frame=first_frame,
-        timestamp=None,
-        description=None,
-        alerted_store=461) # to do get the store id from the device id
+    if not test_mode:
+        alert = Alert(
+            alert_id=None,
+            banned_person_id=match_person.id,
+            banned_person_image=match_image,
+            matched_frame=first_frame,
+            timestamp=None,
+            description=None,
+            alerted_store=461) # to do get the store id from the device id
 
-    log_alert(alert)
+        log_alert(alert)
 
     employees = get_store_employees_from_device(device_id)
+
+    if test_mode:
+        employees = [employees[0]]
+
+    
     if mode == "EMAIL":
         send_email(match_image, first_frame, match_person, employees)
         return
     if mode == "TEXT":
-        print("Notify mode not setup yet")
+        send_notification(match_image, first_frame, match_person, employees)
         return
     if mode == "IN_APP":
         print("Notify mode not setup yet")
@@ -55,6 +69,105 @@ def notify(match_image, first_frame, match_person, device_id, mode="EMAIL"):
 
     print("Notify mode not valid")
     return
+
+def upload_to_s3(bucket_name, image_base64, object_name):
+    """
+    Upload a base64 image to S3 bucket.
+
+    :param bucket_name: str - Name of the S3 bucket
+    :param image_base64: str - Base64 encoded image data
+    :param object_name: str - Object name under which the image will be saved in the bucket
+    """
+    # Initialize a session using your credentials
+    session = boto3.Session(
+        aws_access_key_id = AWS_ACCESS_S3_KEY,
+        aws_secret_access_key= AWS_SECRET_ACCESS_S3_KEY, 
+        region_name='us-west-1',
+    )
+
+    # Create an S3 client
+    s3 = session.client('s3')
+    try:
+        # Decode the base64 string
+        image_data = base64.b64decode(image_base64)
+        
+        # Upload the image data to S3
+        s3.put_object(Bucket=bucket_name, Key=object_name, Body=image_data, ContentType='image/jpeg')  # Change ContentType if not JPEG
+        
+        print(f"Image uploaded successfully to {bucket_name}/{object_name}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    return f"https://s3.us-west-1.amazonaws.com/{bucket_name}/{object_name}"
+
+def send_text_message(phone_number, first_frame_url, match_image_url):
+    account_sid = 'AC6f6e11855f474741f2184e6fea00b501'
+    auth_token = '3b535f114ccbd896ab9b19b3a629a9b7'
+    client = Client(account_sid, auth_token)
+
+    message = client.messages.create(
+    from_='+18889917482',
+    body="Rooster Security Alert: A potential Match has been identified in your store.\n\nPlease review the images and confirm the match.\n\nWatchlisted person:",
+    to=phone_number,
+    )
+    message = client.messages.create(
+    from_='+18889917482',
+    body="Image from security camera:",
+    to=phone_number,
+    media_url=match_image_url
+    )
+    message = client.messages.create(
+    from_='+18889917482',
+    body="Are these a match? Remeber that false matches are possible.\n\nText STOP to unsubscribe from alerts.",
+    to=phone_number,
+    media_url=first_frame_url
+    )
+
+def delete_s3_object(bucket_name, key):
+    # Initialize a session (optional step, depends on your setup)
+    session = boto3.Session(
+        aws_access_key_id = AWS_ACCESS_S3_KEY,
+        aws_secret_access_key= AWS_SECRET_ACCESS_S3_KEY, 
+        region_name='us-west-1',
+    )
+    s3 = session.client('s3')
+
+    # Delete the object
+    response = s3.delete_object(Bucket=bucket_name, Key=key)
+    return response
+
+
+
+def send_notification(match_image, first_frame, match_person, employees):
+    """Sends a text message alert with attached images for shoplifter identification."""
+
+    # add images to s3 bucket
+    bucket_name = 'rooster.test.image'
+    match_object_name = f"m{str(uuid.uuid4())}.jpg"
+    first_frame_object_name = f"f{str(uuid.uuid4())}.jpg"
+
+
+    first_frame_url = upload_to_s3(bucket_name, first_frame, first_frame_object_name)
+    match_image_url = upload_to_s3(bucket_name, match_image, match_object_name)
+
+    # get correct phone numbers
+    phone_numbers = []
+    for employee in employees:
+        if employee.phone_number:
+            phone_numbers.append(f"+{employee.phone_number}")
+
+    print(phone_numbers)
+
+    # send text message
+    for number in phone_numbers:
+        send_text_message([number], first_frame_url, match_image_url)
+
+    # wait some amount of time
+    time.sleep(30)
+
+    # remove images from s3 bucket
+    delete_s3_object(bucket_name, match_object_name)
+    delete_s3_object(bucket_name, first_frame_object_name)
 
 
 def send_email(match_image, first_frame, match_person, employees):
@@ -208,3 +321,23 @@ def send_warning_email(message: str):
             "html": html_content,
         }
         resend.Emails.send(params)
+
+if __name__ == "__main__":
+    # get path
+    cur_dir = os.path.dirname(__file__)
+    # encode image to base64
+    with open(f"{cur_dir}/Headshot.JPG", "rb") as db_image_file:
+        db_image = base64.b64encode(db_image_file.read())
+    with open(f"{cur_dir}/20220624_162839.jpg", "rb") as first_frame_file:
+        first_frame = base64.b64encode(first_frame_file.read())
+    banned_person = {
+        "id": 1,
+        "full_name": "John Doe",
+        "drivers_license": "123456789",
+        "est_value_stolen": "$100",
+        "reporting_store_id": 461,
+    }
+
+    notify(db_image, first_frame, None, 4, mode="TEXT", test_mode=True)
+    # send_warning_email("This is a test warning email")
+    # notify("test", "test", "test", "

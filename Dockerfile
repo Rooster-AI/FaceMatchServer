@@ -20,7 +20,8 @@ RUN pip install --no-cache-dir tqdm==4.66.1
 RUN pip install --no-cache-dir supabase==2.3.4
 RUN pip install --no-cache-dir python-dotenv==1.0.0
 RUN pip install --no-cache-dir resend
-
+RUN pip install --no-cache-dir twilio
+RUN pip install boto3
 RUN pip install opencv-python-headless
 RUN pip install gunicorn
 
