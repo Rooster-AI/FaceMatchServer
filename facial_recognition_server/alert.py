@@ -1,4 +1,4 @@
-# pylint: disable=C0413,E0401
+# pylint: disable=C0413,E0401,C0301,R0913,C0103,W0718,W0612,W0613
 """
     Contains the code for sending alerts
 """
@@ -6,10 +6,9 @@ import time
 import sys
 import os
 import base64
+import uuid
 import resend
 import boto3
-import uuid
-from io import BytesIO
 
 from twilio.rest import Client
 from dotenv import load_dotenv
@@ -22,7 +21,6 @@ PAR_DIR = os.path.dirname(MAIN_DIR)
 sys.path.append(PAR_DIR)
 from models.alert import Alert
 from supabase_dao import (
-    database_log,
     get_store_employees,
     get_store_by_id,
     get_store_employees_from_device,
@@ -56,7 +54,6 @@ def notify(match_image, first_frame, match_person, device_id, mode="EMAIL", test
     if test_mode:
         employees = [employees[0]]
 
-    
     if mode == "EMAIL":
         send_email(match_image, first_frame, match_person, employees)
         return
@@ -81,7 +78,7 @@ def upload_to_s3(bucket_name, image_base64, object_name):
     # Initialize a session using your credentials
     session = boto3.Session(
         aws_access_key_id = AWS_ACCESS_S3_KEY,
-        aws_secret_access_key= AWS_SECRET_ACCESS_S3_KEY, 
+        aws_secret_access_key= AWS_SECRET_ACCESS_S3_KEY,
         region_name='us-west-1',
     )
 
@@ -90,10 +87,15 @@ def upload_to_s3(bucket_name, image_base64, object_name):
     try:
         # Decode the base64 string
         image_data = base64.b64decode(image_base64)
-        
+
         # Upload the image data to S3
-        s3.put_object(Bucket=bucket_name, Key=object_name, Body=image_data, ContentType='image/jpeg')  # Change ContentType if not JPEG
-        
+        s3.put_object(
+                Bucket=bucket_name,
+                Key=object_name,
+                Body=image_data,
+                ContentType='image/jpeg'
+            )
+
         print(f"Image uploaded successfully to {bucket_name}/{object_name}")
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -101,6 +103,7 @@ def upload_to_s3(bucket_name, image_base64, object_name):
     return f"https://s3.us-west-1.amazonaws.com/{bucket_name}/{object_name}"
 
 def send_text_message(phone_number, first_frame_url, match_image_url):
+    """Sends a text message alert with attached images for shoplifter identification."""
     account_sid = 'AC6f6e11855f474741f2184e6fea00b501'
     auth_token = '3b535f114ccbd896ab9b19b3a629a9b7'
     client = Client(account_sid, auth_token)
@@ -124,10 +127,11 @@ def send_text_message(phone_number, first_frame_url, match_image_url):
     )
 
 def delete_s3_object(bucket_name, key):
+    """delete an object from an S3 bucket"""
     # Initialize a session (optional step, depends on your setup)
     session = boto3.Session(
         aws_access_key_id = AWS_ACCESS_S3_KEY,
-        aws_secret_access_key= AWS_SECRET_ACCESS_S3_KEY, 
+        aws_secret_access_key= AWS_SECRET_ACCESS_S3_KEY,
         region_name='us-west-1',
     )
     s3 = session.client('s3')
@@ -328,7 +332,7 @@ if __name__ == "__main__":
     with open(f"{cur_dir}/Headshot.JPG", "rb") as db_image_file:
         db_image = base64.b64encode(db_image_file.read())
     with open(f"{cur_dir}/20220624_162839.jpg", "rb") as first_frame_file:
-        first_frame = base64.b64encode(first_frame_file.read())
+        first_frame_ = base64.b64encode(first_frame_file.read())
     banned_person = {
         "id": 1,
         "full_name": "John Doe",
@@ -337,6 +341,6 @@ if __name__ == "__main__":
         "reporting_store_id": 461,
     }
 
-    notify(db_image, first_frame, None, 4, mode="TEXT", test_mode=True)
+    notify(db_image, first_frame_, None, 4, mode="TEXT", test_mode=True)
     # send_warning_email("This is a test warning email")
     # notify("test", "test", "test", "
