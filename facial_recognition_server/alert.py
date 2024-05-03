@@ -156,7 +156,6 @@ def send_notification(match_image, first_frame, match_person, employees):
         if employee.phone_number:
             phone_numbers.append(f"+{employee.phone_number}")
 
-    print(phone_numbers)
 
     # send text message
     for number in phone_numbers:
