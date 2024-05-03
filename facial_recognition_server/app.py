@@ -222,7 +222,7 @@ def verify_faces(face_groups, first_frame, device_id):
         if TESTING_MODE:
             write_to_test_directory(match, face_dict, confidence_levels, epoch_folder)
         else:
-            notify(match_image, first_frame, match_person, device_id)
+            notify(match_image, first_frame, match_person, device_id, mode="TEXT")
             database_log(
                 Logging(
                     device_id,
