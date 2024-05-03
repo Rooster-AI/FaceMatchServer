@@ -31,6 +31,8 @@ jobs:
       run: |
         echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
         echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+        echo "AWS_ACCESS_S3_KEY=${{ secrets.AWS_ACCESS_S3_KEY }}" >> .env
+        echo "AWS_SECRET_ACCESS_S3_KEY=${{ secrets.AWS_SECRET_ACCESS_S3_KEY }}" >> .env
     - name: Run unittests
       run: |
         python -m unittest discover -s test
